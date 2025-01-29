@@ -12,32 +12,14 @@ export class ActiveTokenService {
   private tokens: TokenType[];
 
   constructor() {
-    this.tokens = [
-      {
-        address: "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
-        ticker: "RON",
-        isActive: false,
-        priceLevels: [1.25, 1.5, 1.75, 2],
-        nextBuy: 1.75,
-        nextSell: 1.25,
-        swapInRonAmount: 0.01,
-      },
-      {
-        address: "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
-        ticker: "AXS",
-        isActive: true,
-        priceLevels: [
-          5, 5.01, 5.02, 5.03, 5.04, 5.05, 5.06, 5.07, 5.08, 5.09, 5.1, 5.11,
-          5.12, 5.13, 5.14, 5.15, 5.16, 5.17, 5.18,
-        ],
-        nextBuy: 5.14,
-        nextSell: 5.13,
-        swapInRonAmount: 0.001,
-      }, //axs
-    ];
+    this.tokens = [];
   }
 
   public getActiveTokens() {
+    return this.tokens.filter((a) => a.isActive);
+  }
+
+  public getAllTokens() {
     return this.tokens;
   }
 

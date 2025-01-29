@@ -2,6 +2,8 @@ import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
 import { authenticateAPIKey } from "./middleware/auth";
+import { tokensSchema } from "./schema/token";
+import { swapSchema } from "./schema/trade";
 import { ActiveTokenService } from "./services/activeTokenService";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import { TradingService } from "./services/tradingService";
@@ -20,7 +22,7 @@ app.use(express.json());
 const activeTokenService = new ActiveTokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 30000;
+const fetchInterval = 3000;
 
 app.post("/start", authenticateAPIKey, async (_req, res) => {
   const coinGeckoService = new CoinGeckoService();
@@ -31,8 +33,16 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
   setInterval(async () => {
     const tokens = activeTokenService.getActiveTokens();
+
+    try {
+      tokensSchema.parse(tokens);
+    } catch (error) {
+      logger.error("Invalid token schema");
+      return;
+    }
+
     if (!tokens || tokens.length === 0) {
-      logger.error("No active trading addresses found.");
+      logger.warn("No active trading addresses found.");
       return; // Exit or handle the case where no addresses are available
     }
     // logger.info(JSON.stringify(tokens, null, 2));
@@ -114,31 +124,74 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
   // if criteria is matched, execute swap ron
 });
 
-app.post(
-  "/addresses/update-addresses",
-  authenticateAPIKey,
-  async (req, res) => {
-    const { addresses } = req.body;
+app.get("/active-tokens", authenticateAPIKey, async (_req, res) => {
+  const tokens = activeTokenService.getActiveTokens();
+  res.status(200).json(tokens);
+});
 
-    await activeTokenService.updateTokens(addresses);
-    res.status(200).json({ message: "Success", data: addresses });
+app.post("/add-active-token", authenticateAPIKey, async (req, res) => {
+  const body = req.body;
+
+  try {
+    tokensSchema.parse(body);
+  } catch (error) {
+    res.status(400).json({ error: "Invalid schema" });
+    return;
   }
-);
+
+  activeTokenService.addToken(body);
+  const updatedTokens = activeTokenService.getAllTokens();
+
+  if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
+    logger.info("Token added successfully");
+    res.status(200).json({ message: "Success", updatedTokens });
+  } else {
+    res.status(500).json({ error: "An error occurred" });
+  }
+});
+
+app.post("/update-active-tokens", authenticateAPIKey, async (req, res) => {
+  const body = req.body;
+
+  try {
+    tokensSchema.parse(body);
+  } catch (error) {
+    res.status(400).json({ error: "Invalid schema" });
+    return;
+  }
+
+  activeTokenService.updateTokens(body);
+  const updatedTokens = activeTokenService.getAllTokens();
+
+  if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
+    logger.info("Tokens updated successfully");
+    res.status(200).json({ message: "Success", updatedTokens });
+  } else {
+    res.status(500).json({ error: "An error occurred" });
+  }
+});
 
 app.post("/swap", authenticateAPIKey, async (req, res) => {
   const { tokenAddress, amount, slippage, direction } = req.body;
 
   try {
+    swapSchema.parse(req.body);
+  } catch (error) {
+    res.status(400).json({ error: "Invalid schema" });
+    return;
+  }
+
+  try {
     const trade = new TradingService();
 
-    if (direction === "ron-to-token") {
+    if (direction === 1) {
       const result = await trade.swapExactRonForToken(
         tokenAddress,
         amount,
         slippage
       );
       res.status(200).json(result);
-    } else if (direction === "token-to-ron") {
+    } else if (direction === 2) {
       const result = await trade.swapTokensForExactRon(
         tokenAddress,
         amount,
@@ -147,7 +200,7 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
       res.status(200).json(result);
     }
   } catch (error) {
-    res.status(500).json({ error: "An error occurred" });
+    res.status(500).json({ error: "An error occurred during swap" });
   }
 });
 
