@@ -1,4 +1,4 @@
-import { createLogger } from "winston";
+import { createLogger } from "../utils/logger";
 import { WalletService } from "./walletService";
 
 const logger = createLogger();
@@ -9,6 +9,9 @@ export class TradingService {
     nextBuy: number,
     nextSell: number
   ) {
+    logger.info(`tokenPrice: ${tokenPrice}`);
+    logger.info(`nextBuy: ${nextBuy}`);
+    logger.info(`nextSell: ${nextSell}`);
     if (tokenPrice <= nextSell) {
       return 2; //sell
     } else if (tokenPrice >= nextBuy) {
@@ -34,6 +37,34 @@ export class TradingService {
       );
 
       const result = await walletService.swapExactRonForToken(
+        tokenAddress,
+        amount,
+        slippage
+      );
+      return result;
+    } catch (error) {
+      logger.error(`Error processing swap: ${error}`);
+      throw error;
+    }
+  }
+
+  public async swapTokensForExactRon(
+    tokenAddress: string,
+    amount: number,
+    slippage: number
+  ) {
+    try {
+      const walletService = new WalletService(
+        {
+          privateKey: process.env.PRIVATE_KEY!,
+          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
+          routerAddress: process.env.ROUTER_ADDRESS!,
+          wronAddress: process.env.WRON_ADDRESS!,
+        },
+        logger
+      );
+
+      const result = await walletService.swapTokensForExactRon(
         tokenAddress,
         amount,
         slippage

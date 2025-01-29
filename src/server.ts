@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
-import { ActiveTokenService } from "./services/addressService";
+import { ActiveTokenService } from "./services/activeTokenService";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import { TradingService } from "./services/tradingService";
 import { createLogger } from "./utils/logger";
@@ -44,27 +44,30 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
   const network = "ronin";
 
   setInterval(async () => {
-    const tokens = await activeTokenService.getActiveToken();
+    const tokens = activeTokenService.getActiveTokens();
     if (!tokens || tokens.length === 0) {
       logger.error("No active trading addresses found.");
       return; // Exit or handle the case where no addresses are available
     }
-    logger.info(JSON.stringify(tokens, null, 2));
+    // logger.info(JSON.stringify(tokens, null, 2));
 
     const data = await coinGeckoService.getMultiTokenPrice(
       tokens.map((a) => a.address),
       network
     );
     const prices = data.data.attributes.token_prices;
-    logger.info(JSON.stringify(prices, null, 2));
-    console.log("====================================");
+    // logger.info(JSON.stringify(prices, null, 2));
 
-    tokens.forEach((token) => {
+    tokens.forEach(async (token) => {
       const tokenPrice = prices[token.address];
       if (!tokenPrice) {
         logger.error(
           `No price found for ${token.ticker}, address: ${token.address}`
         );
+        return;
+      }
+
+      if (!token.isActive) {
         return;
       }
 
@@ -76,17 +79,42 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
       );
 
       if (shouldSwap === 1) {
-        logger.info(`Should buy ${token.ticker}`);
+        logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
+        await trade.swapExactRonForToken(
+          token.address,
+          token.swapInRonAmount,
+          0.5
+        );
+
+        const nextBuyIndex = token.priceLevels.indexOf(token.nextBuy);
+        token.nextBuy = token.priceLevels[nextBuyIndex + 1];
+        token.nextSell = token.priceLevels[nextBuyIndex - 1];
+
+        // check
+        const activeToken = activeTokenService.getSingleToken(token.address);
+        logger.info(JSON.stringify(activeToken));
       } else if (shouldSwap === 2) {
-        logger.info(`Should sell ${token.ticker}`);
+        logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
+        await trade.swapTokensForExactRon(
+          token.address,
+          token.swapInRonAmount,
+          0.5
+        );
+
+        const nextSellIndex = token.priceLevels.indexOf(token.nextSell);
+        token.nextSell = token.priceLevels[nextSellIndex - 1];
+        token.nextBuy = token.priceLevels[nextSellIndex + 1];
+
+        const activeToken = activeTokenService.getSingleToken(token.address);
+        logger.info(JSON.stringify(activeToken));
       } else {
-        logger.info(`Do nothing for ${token.ticker}`);
+        logger.info(`${token.ticker}: Hold`);
       }
 
       //   const tokenPriceInRon = tokenPrice.ron;
       //   const priceLevels = token.priceLevels;
     });
-  }, 3000);
+  }, 30000);
 
   res.status(200).json({ message: "Success", data: "Started" });
 
@@ -105,22 +133,32 @@ app.post(
   }
 );
 
-app.listen(port, () => {
-  logger.info(`Server running on port ${port}`);
-});
-
 app.post("/swap", authenticateAPIKey, async (req, res) => {
-  const { tokenAddress, amount, slippage } = req.body;
+  const { tokenAddress, amount, slippage, direction } = req.body;
 
   try {
     const trade = new TradingService();
-    const result = await trade.swapExactRonForToken(
-      tokenAddress,
-      amount,
-      slippage
-    );
-    res.status(200).json(result);
+
+    if (direction === "ron-to-token") {
+      const result = await trade.swapExactRonForToken(
+        tokenAddress,
+        amount,
+        slippage
+      );
+      res.status(200).json(result);
+    } else if (direction === "token-to-ron") {
+      const result = await trade.swapTokensForExactRon(
+        tokenAddress,
+        amount,
+        slippage
+      );
+      res.status(200).json(result);
+    }
   } catch (error) {
     res.status(500).json({ error: "An error occurred" });
   }
+});
+
+app.listen(port, () => {
+  logger.info(`Server running on port ${port}`);
 });

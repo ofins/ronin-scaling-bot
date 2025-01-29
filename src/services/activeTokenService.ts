@@ -26,27 +26,34 @@ export class ActiveTokenService {
         address: "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
         ticker: "AXS",
         isActive: true,
-        priceLevels: [5, 6, 7, 8, 9, 10],
-        nextBuy: 5,
-        nextSell: 4,
-        swapInRonAmount: 0.01,
+        priceLevels: [
+          5, 5.01, 5.02, 5.03, 5.04, 5.05, 5.06, 5.07, 5.08, 5.09, 5.1, 5.11,
+          5.12, 5.13, 5.14, 5.15, 5.16, 5.17, 5.18,
+        ],
+        nextBuy: 5.14,
+        nextSell: 5.13,
+        swapInRonAmount: 0.001,
       }, //axs
     ];
   }
 
-  public async getActiveToken(): Promise<TokenType[]> {
+  public getActiveTokens() {
     return this.tokens;
   }
 
-  public async addToken(address: TokenType): Promise<void> {
+  public getSingleToken(address: string) {
+    return this.tokens.find((a) => a.address === address);
+  }
+
+  public addToken(address: TokenType) {
     this.tokens.push(address);
   }
 
-  public async removeToken(address: string): Promise<void> {
+  public removeToken(address: string) {
     this.tokens = this.tokens.filter((a) => a.address !== address);
   }
 
-  public async updateTokens(addresses: TokenType[]): Promise<void> {
+  public updateTokens(addresses: TokenType[]) {
     this.tokens = addresses;
   }
 }

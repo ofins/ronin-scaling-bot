@@ -5,9 +5,7 @@ const logger = createLogger();
 
 export class CoinGeckoService {
   public async getMultiTokenPrice(tokenAddresses: string[], network: string) {
-    logger.info(
-      `Fetching token prices for ${tokenAddresses.join(",")} ${network}`
-    );
+    logger.info(`checking token prices on coingecko...`);
     const url = `https://api.geckoterminal.com/api/v2/simple/networks/${network}/token_price/${tokenAddresses.join(
       ","
     )}`;
