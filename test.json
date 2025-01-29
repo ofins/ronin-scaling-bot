@@ -1,0 +1,14 @@
+[
+  {
+    "address": "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
+    "isActive": false,
+    "priceLevels": [1.25, 1.5, 1.75, 2],
+    "swapInRonAmount": 0.01
+  },
+  {
+    "address": "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
+    "isActive": true,
+    "priceLevels": [5, 6, 7, 8, 9, 10],
+    "swapInRonAmount": 0.01
+  }
+]

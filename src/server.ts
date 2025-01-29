@@ -1,8 +1,8 @@
 import dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
-import { AddressService } from "./services/addressService";
+import { ActiveTokenService } from "./services/addressService";
 import { CoinGeckoService } from "./services/coinGeckoService";
-import { WalletService } from "./services/walletService";
+import { TradingService } from "./services/tradingService";
 import { createLogger } from "./utils/logger";
 
 dotenv.config();
@@ -34,7 +34,7 @@ const authenticateAPIKey = (
 
 app.use(express.json());
 
-const addressService = new AddressService();
+const activeTokenService = new ActiveTokenService();
 // Token address is initialized when server starts
 
 app.post("/start", authenticateAPIKey, async (req, res) => {
@@ -44,19 +44,48 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
   const network = "ronin";
 
   setInterval(async () => {
-    const tokenAddresses = await addressService.getActiveTradingAddresses();
-    if (!tokenAddresses || tokenAddresses.length === 0) {
+    const tokens = await activeTokenService.getActiveToken();
+    if (!tokens || tokens.length === 0) {
       logger.error("No active trading addresses found.");
       return; // Exit or handle the case where no addresses are available
     }
-    logger.info(tokenAddresses);
+    logger.info(JSON.stringify(tokens, null, 2));
 
-    const prices = await coinGeckoService.getMultiTokenPrice(
-      tokenAddresses,
+    const data = await coinGeckoService.getMultiTokenPrice(
+      tokens.map((a) => a.address),
       network
     );
+    const prices = data.data.attributes.token_prices;
     logger.info(JSON.stringify(prices, null, 2));
     console.log("====================================");
+
+    tokens.forEach((token) => {
+      const tokenPrice = prices[token.address];
+      if (!tokenPrice) {
+        logger.error(
+          `No price found for ${token.ticker}, address: ${token.address}`
+        );
+        return;
+      }
+
+      const trade = new TradingService();
+      const shouldSwap = trade.checkShouldSwap(
+        tokenPrice,
+        token.nextBuy,
+        token.nextSell
+      );
+
+      if (shouldSwap === 1) {
+        logger.info(`Should buy ${token.ticker}`);
+      } else if (shouldSwap === 2) {
+        logger.info(`Should sell ${token.ticker}`);
+      } else {
+        logger.info(`Do nothing for ${token.ticker}`);
+      }
+
+      //   const tokenPriceInRon = tokenPrice.ron;
+      //   const priceLevels = token.priceLevels;
+    });
   }, 3000);
 
   res.status(200).json({ message: "Success", data: "Started" });
@@ -71,7 +100,7 @@ app.post(
   async (req, res) => {
     const { addresses } = req.body;
 
-    await addressService.updateAddresses(addresses);
+    await activeTokenService.updateTokens(addresses);
     res.status(200).json({ message: "Success", data: addresses });
   }
 );
@@ -84,37 +113,14 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
   const { tokenAddress, amount, slippage } = req.body;
 
   try {
-    const result = await swapExactRonForToken(tokenAddress, amount, slippage);
+    const trade = new TradingService();
+    const result = await trade.swapExactRonForToken(
+      tokenAddress,
+      amount,
+      slippage
+    );
     res.status(200).json(result);
   } catch (error) {
     res.status(500).json({ error: "An error occurred" });
   }
 });
-
-async function swapExactRonForToken(
-  tokenAddress: string,
-  amount: number,
-  slippage: number
-) {
-  try {
-    const walletService = new WalletService(
-      {
-        privateKey: process.env.PRIVATE_KEY!,
-        roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
-        routerAddress: process.env.ROUTER_ADDRESS!,
-        wronAddress: process.env.WRON_ADDRESS!,
-      },
-      logger
-    );
-
-    const result = await walletService.swapExactRonForToken(
-      tokenAddress,
-      amount,
-      slippage
-    );
-    return result;
-  } catch (error) {
-    logger.error(`Error processing swap: ${error}`);
-    throw error;
-  }
-}
