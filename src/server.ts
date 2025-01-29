@@ -1,5 +1,6 @@
 import dotenv from "dotenv";
 import express, { NextFunction, Request, Response } from "express";
+import { AddressService } from "./services/addressService";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import { WalletService } from "./services/walletService";
 import { createLogger } from "./utils/logger";
@@ -33,16 +34,23 @@ const authenticateAPIKey = (
 
 app.use(express.json());
 
+const addressService = new AddressService();
+// Token address is initialized when server starts
+
 app.post("/start", authenticateAPIKey, async (req, res) => {
   const { isStart } = req.body;
   const coinGeckoService = new CoinGeckoService();
-  const tokenAddresses = [
-    "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
-    "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
-  ];
+
   const network = "ronin";
 
   setInterval(async () => {
+    const tokenAddresses = await addressService.getActiveTradingAddresses();
+    if (!tokenAddresses || tokenAddresses.length === 0) {
+      logger.error("No active trading addresses found.");
+      return; // Exit or handle the case where no addresses are available
+    }
+    logger.info(tokenAddresses);
+
     const prices = await coinGeckoService.getMultiTokenPrice(
       tokenAddresses,
       network
@@ -56,6 +64,17 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
   // run scanner
   // if criteria is matched, execute swap ron
 });
+
+app.post(
+  "/addresses/update-addresses",
+  authenticateAPIKey,
+  async (req, res) => {
+    const { addresses } = req.body;
+
+    await addressService.updateAddresses(addresses);
+    res.status(200).json({ message: "Success", data: addresses });
+  }
+);
 
 app.listen(port, () => {
   logger.info(`Server running on port ${port}`);
