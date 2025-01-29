@@ -23,6 +23,14 @@ export const createLogger = () => {
           })
         ),
       }),
+      new winston.transports.File({
+        filename: "logs/error.log",
+        level: "error", // Only log errors to this file
+        format: winston.format.combine(
+          winston.format.timestamp(),
+          winston.format.json()
+        ),
+      }),
     ],
   });
 };

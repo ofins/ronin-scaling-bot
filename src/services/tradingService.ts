@@ -9,9 +9,6 @@ export class TradingService {
     nextBuy: number,
     nextSell: number
   ) {
-    logger.info(`tokenPrice: ${tokenPrice}`);
-    logger.info(`nextBuy: ${nextBuy}`);
-    logger.info(`nextSell: ${nextSell}`);
     if (tokenPrice <= nextSell) {
       return 2; //sell
     } else if (tokenPrice >= nextBuy) {
@@ -75,6 +72,4 @@ export class TradingService {
       throw error;
     }
   }
-
-  //   swapExactTokenForRon
 }

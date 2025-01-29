@@ -1,5 +1,7 @@
 import dotenv from "dotenv";
-import express, { NextFunction, Request, Response } from "express";
+import express from "express";
+import helmet from "helmet";
+import { authenticateAPIKey } from "./middleware/auth";
 import { ActiveTokenService } from "./services/activeTokenService";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import { TradingService } from "./services/tradingService";
@@ -9,37 +11,21 @@ dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
-const API_KEY = process.env.API_KEY;
 const logger = createLogger();
 
-const authenticateAPIKey = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  const providedKey = req.header("x-api-key");
-
-  if (!providedKey) {
-    res.status(401).json({ error: "Invalid." });
-    return;
-  }
-
-  if (providedKey !== API_KEY) {
-    res.status(403).json({ error: "Invalid." });
-    return;
-  }
-
-  next();
-};
-
+app.use(helmet());
 app.use(express.json());
 
-const activeTokenService = new ActiveTokenService();
 // Token address is initialized when server starts
+const activeTokenService = new ActiveTokenService();
 
-app.post("/start", authenticateAPIKey, async (req, res) => {
-  const { isStart } = req.body;
+// const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
+const fetchInterval = 30000;
+
+app.post("/start", authenticateAPIKey, async (_req, res) => {
   const coinGeckoService = new CoinGeckoService();
+  logger.info("Starting bot...");
+  logger.info("Fetch interval: " + fetchInterval / 1000 + " seconds");
 
   const network = "ronin";
 
@@ -55,7 +41,13 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
       tokens.map((a) => a.address),
       network
     );
-    const prices = data.data.attributes.token_prices;
+
+    if (!data || !data.data.attributes.token_prices) {
+      logger.error("No data found from CoinGecko.");
+      return;
+    }
+
+    const prices = data.data.attributes.token_prices || {};
     // logger.info(JSON.stringify(prices, null, 2));
 
     tokens.forEach(async (token) => {
@@ -114,7 +106,7 @@ app.post("/start", authenticateAPIKey, async (req, res) => {
       //   const tokenPriceInRon = tokenPrice.ron;
       //   const priceLevels = token.priceLevels;
     });
-  }, 30000);
+  }, fetchInterval);
 
   res.status(200).json({ message: "Success", data: "Started" });
 
