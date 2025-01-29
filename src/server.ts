@@ -75,9 +75,13 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
     }
 
     const prices = data.data.attributes.token_prices || {};
+    const lowerCasePrices = Object.keys(prices).reduce((acc: any, key) => {
+      acc[key.toLowerCase()] = prices[key];
+      return acc;
+    }, {});
 
     tokens.forEach(async (token) => {
-      const tokenPrice = prices[token.address];
+      const tokenPrice = lowerCasePrices[token.address.toLowerCase()];
       if (!tokenPrice) {
         logger.error(
           `No price found for ${token.ticker}, address: ${token.address}`
@@ -118,6 +122,9 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
           `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
         sendSwapSuccess(result);
+        sendMessage(
+          `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
+        );
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
         sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
@@ -140,6 +147,9 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
           `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
         sendSwapSuccess(result);
+        sendMessage(
+          `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
+        );
       } else {
         logger.info(`${token.ticker}: Hold`);
       }
