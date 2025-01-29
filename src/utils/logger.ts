@@ -1,7 +1,5 @@
 import winston from "winston";
-const blueColorize = (text: string) => `\x1b[34m${text}\x1b[39m`; // ANSI escape code for blue
 const lightBlueColorize = (text: string) => `\x1b[94m${text}\x1b[39m`; // Light blue ANSI escape code
-console.log(lightBlueColorize("This is light blue text!"));
 
 export const createLogger = () => {
   return winston.createLogger({

@@ -72,4 +72,60 @@ export class TradingService {
       throw error;
     }
   }
+
+  public async swapRONForExactTokens(
+    tokenAddress: string,
+    amount: number,
+    slippage: number
+  ) {
+    try {
+      const walletService = new WalletService(
+        {
+          privateKey: process.env.PRIVATE_KEY!,
+          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
+          routerAddress: process.env.ROUTER_ADDRESS!,
+          wronAddress: process.env.WRON_ADDRESS!,
+        },
+        logger
+      );
+
+      const result = await walletService.swapRONForExactTokens(
+        tokenAddress,
+        amount,
+        slippage
+      );
+      return result;
+    } catch (error) {
+      logger.error(`Error processing swap: ${error}`);
+      throw error;
+    }
+  }
+
+  public async swapExactTokensForRon(
+    tokenAddress: string,
+    amount: number,
+    slippage: number
+  ) {
+    try {
+      const walletService = new WalletService(
+        {
+          privateKey: process.env.PRIVATE_KEY!,
+          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
+          routerAddress: process.env.ROUTER_ADDRESS!,
+          wronAddress: process.env.WRON_ADDRESS!,
+        },
+        logger
+      );
+
+      const result = await walletService.swapExactTokensForRon(
+        tokenAddress,
+        amount,
+        slippage
+      );
+      return result;
+    } catch (error) {
+      logger.error(`Error processing swap: ${error}`);
+      throw error;
+    }
+  }
 }

@@ -5,7 +5,7 @@ export const tokenSchema = z.object({
   isActive: z.boolean(),
   ticker: z.string(),
   priceLevels: z.array(z.number()),
-  swapInRonAmount: z.number(),
+  swapAmountInToken: z.number(),
   nextBuy: z.number(),
   nextSell: z.number(),
 });

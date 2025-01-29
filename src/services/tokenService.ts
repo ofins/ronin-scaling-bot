@@ -3,7 +3,7 @@ type TokenType = {
   isActive: boolean;
   ticker: string;
   priceLevels: number[];
-  swapInRonAmount: number;
+  swapAmountInToken: number;
   nextBuy: number;
   nextSell: number;
 };

@@ -9,6 +9,7 @@ import "./services/telegramService";
 import { sendMessage, sendSwapSuccess } from "./services/telegramService";
 import { TokenService } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
+import { SwapResult } from "./types";
 import { createLogger } from "./utils/logger";
 
 dotenv.config();
@@ -25,7 +26,7 @@ let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 60000;
+const fetchInterval = 15000;
 
 app.get("/health-check", async (_req, res) => {
   const botStatus = botInterval ? "active" : "inactive"; // Check if interval is active
@@ -103,9 +104,9 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
       if (shouldSwap === 1) {
         logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
         sendMessage(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
-        const result = await trade.swapExactRonForToken(
+        const result = await trade.swapRONForExactTokens(
           token.address,
-          token.swapInRonAmount,
+          token.swapAmountInToken,
           0.5
         );
 
@@ -121,16 +122,16 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         logger.info(
           `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
-        sendSwapSuccess(result);
+        sendSwapSuccess(result as SwapResult);
         sendMessage(
           `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
         );
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
         sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
-        const result = await trade.swapTokensForExactRon(
+        const result = await trade.swapExactTokensForRon(
           token.address,
-          token.swapInRonAmount,
+          token.swapAmountInToken,
           0.5
         );
 
@@ -231,19 +232,21 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
     const trade = new TradingService();
 
     if (direction === 1) {
-      const result = await trade.swapExactRonForToken(
+      const result = await trade.swapRONForExactTokens(
         tokenAddress,
         amount,
         slippage
       );
       res.status(200).json(result);
-      sendSwapSuccess(result);
+      sendSwapSuccess(result as SwapResult);
+      logger.info(result);
     } else if (direction === 2) {
-      const result = await trade.swapTokensForExactRon(
+      const result = await trade.swapExactTokensForRon(
         tokenAddress,
         amount,
         slippage
       );
+
       res.status(200).json(result);
       sendSwapSuccess(result);
     }

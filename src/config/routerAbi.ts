@@ -53,26 +53,25 @@ export const ERC20_ABI = [
 
 export const ROUTER_ABI = [
   {
-    constant: false,
     inputs: [
       {
         internalType: "uint256",
-        name: "_amountOut",
+        name: "amountOut",
         type: "uint256",
       },
       {
         internalType: "address[]",
-        name: "_path",
+        name: "path",
         type: "address[]",
       },
       {
         internalType: "address",
-        name: "_to",
+        name: "to",
         type: "address",
       },
       {
         internalType: "uint256",
-        name: "_deadline",
+        name: "deadline",
         type: "uint256",
       },
     ],
@@ -80,11 +79,10 @@ export const ROUTER_ABI = [
     outputs: [
       {
         internalType: "uint256[]",
-        name: "_amounts",
+        name: "amounts",
         type: "uint256[]",
       },
     ],
-    payable: true,
     stateMutability: "payable",
     type: "function",
   },
