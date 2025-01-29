@@ -5,10 +5,10 @@ import { authenticateAPIKey } from "./middleware/auth";
 import { tokensSchema } from "./schema/token";
 import { swapSchema } from "./schema/trade";
 import { CoinGeckoService } from "./services/coinGeckoService";
+import "./services/telegramService";
 import { TokenService } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
 import { createLogger } from "./utils/logger";
-
 dotenv.config();
 
 const app = express();
@@ -22,9 +22,20 @@ app.use(express.json());
 const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 30000;
+const fetchInterval = 6000;
+
+app.get("/health-check", async (_req, res) => {
+  res.status(200).json({ status: "ok", uptime: process.uptime() });
+});
+
+let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 app.post("/start", authenticateAPIKey, async (_req, res) => {
+  if (botInterval) {
+    res.status(400).json({ message: "Bot is already running" });
+    return;
+  }
+
   const activeToken = tokenService.getActiveTokens();
 
   logger.info(activeToken);
@@ -35,7 +46,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
   const network = "ronin";
 
-  setInterval(async () => {
+  botInterval = setInterval(async () => {
     const tokens = tokenService.getActiveTokens();
 
     try {
@@ -92,7 +103,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
         const activeToken = tokenService.getSingleToken(token.address);
         logger.info(
-          `${activeToken?.ticker} - [PREV]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+          `${activeToken?.ticker} - [PREV]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
 
         const nextBuyIndex = token.priceLevels.indexOf(token.nextBuy);
@@ -100,7 +111,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         token.nextSell = token.priceLevels[nextBuyIndex - 1];
 
         logger.info(
-          `${activeToken?.ticker} - [NEW]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+          `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
@@ -112,7 +123,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
         const activeToken = tokenService.getSingleToken(token.address);
         logger.info(
-          `${activeToken?.ticker} - [PREV]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+          `${activeToken?.ticker} - [PREV]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
 
         const nextSellIndex = token.priceLevels.indexOf(token.nextSell);
@@ -120,7 +131,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         token.nextBuy = token.priceLevels[nextSellIndex + 1];
 
         logger.info(
-          `${activeToken?.ticker} - [NEW]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+          `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
       } else {
         logger.info(`${token.ticker}: Hold`);
@@ -130,11 +141,21 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
       //   const priceLevels = token.priceLevels;
     });
   }, fetchInterval);
-
   res.status(200).json({ message: "Success", data: "Started" });
-
+  return;
   // run scanner
   // if criteria is matched, execute swap ron
+});
+
+app.post("/stop", authenticateAPIKey, async (_req, res) => {
+  if (botInterval) {
+    clearInterval(botInterval);
+    botInterval = null;
+    logger.info("Bot stopped");
+    res.status(200).json({ message: "Bot stopped" });
+  } else {
+    res.status(400).json({ message: "Bot is not running" });
+  }
 });
 
 app.get("/active-tokens", authenticateAPIKey, async (_req, res) => {
