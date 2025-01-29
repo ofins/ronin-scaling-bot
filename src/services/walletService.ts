@@ -123,7 +123,7 @@ export class WalletService {
           this.wallet.address
         );
 
-        this.logger.info(`Success! Transaction hash: ${tx.hash}`);
+        this.logger.info(`Success!`);
         this.logger.info(`Gas used: ${gasUsed} RON`);
         this.logger.info(`Final RON balance: ${finalRon} RON`);
         this.logger.info(
@@ -245,7 +245,7 @@ export class WalletService {
           tokenAddress,
           this.wallet.address
         );
-        this.logger.info(`Success! Transaction hash: ${tx.hash}`);
+        this.logger.info(`Success!`);
         this.logger.info(`Gas used: ${gasUsed} RON`);
         this.logger.info(`Final RON balance: ${finalRon} RON`);
         this.logger.info(

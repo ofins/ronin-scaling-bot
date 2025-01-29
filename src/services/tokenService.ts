@@ -8,7 +8,7 @@ type TokenType = {
   nextSell: number;
 };
 
-export class ActiveTokenService {
+export class TokenService {
   private tokens: TokenType[];
 
   constructor() {

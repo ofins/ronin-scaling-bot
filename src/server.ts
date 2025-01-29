@@ -4,8 +4,8 @@ import helmet from "helmet";
 import { authenticateAPIKey } from "./middleware/auth";
 import { tokensSchema } from "./schema/token";
 import { swapSchema } from "./schema/trade";
-import { ActiveTokenService } from "./services/activeTokenService";
 import { CoinGeckoService } from "./services/coinGeckoService";
+import { TokenService } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
 import { createLogger } from "./utils/logger";
 
@@ -19,12 +19,16 @@ app.use(helmet());
 app.use(express.json());
 
 // Token address is initialized when server starts
-const activeTokenService = new ActiveTokenService();
+const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 3000;
+const fetchInterval = 30000;
 
 app.post("/start", authenticateAPIKey, async (_req, res) => {
+  const activeToken = tokenService.getActiveTokens();
+
+  logger.info(activeToken);
+
   const coinGeckoService = new CoinGeckoService();
   logger.info("Starting bot...");
   logger.info("Fetch interval: " + fetchInterval / 1000 + " seconds");
@@ -32,7 +36,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
   const network = "ronin";
 
   setInterval(async () => {
-    const tokens = activeTokenService.getActiveTokens();
+    const tokens = tokenService.getActiveTokens();
 
     try {
       tokensSchema.parse(tokens);
@@ -45,7 +49,6 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
       logger.warn("No active trading addresses found.");
       return; // Exit or handle the case where no addresses are available
     }
-    // logger.info(JSON.stringify(tokens, null, 2));
 
     const data = await coinGeckoService.getMultiTokenPrice(
       tokens.map((a) => a.address),
@@ -58,7 +61,6 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
     }
 
     const prices = data.data.attributes.token_prices || {};
-    // logger.info(JSON.stringify(prices, null, 2));
 
     tokens.forEach(async (token) => {
       const tokenPrice = prices[token.address];
@@ -88,13 +90,18 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
           0.5
         );
 
+        const activeToken = tokenService.getSingleToken(token.address);
+        logger.info(
+          `${activeToken?.ticker} - [PREV]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+        );
+
         const nextBuyIndex = token.priceLevels.indexOf(token.nextBuy);
         token.nextBuy = token.priceLevels[nextBuyIndex + 1];
         token.nextSell = token.priceLevels[nextBuyIndex - 1];
 
-        // check
-        const activeToken = activeTokenService.getSingleToken(token.address);
-        logger.info(JSON.stringify(activeToken));
+        logger.info(
+          `${activeToken?.ticker} - [NEW]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+        );
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
         await trade.swapTokensForExactRon(
@@ -103,12 +110,18 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
           0.5
         );
 
+        const activeToken = tokenService.getSingleToken(token.address);
+        logger.info(
+          `${activeToken?.ticker} - [PREV]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+        );
+
         const nextSellIndex = token.priceLevels.indexOf(token.nextSell);
         token.nextSell = token.priceLevels[nextSellIndex - 1];
         token.nextBuy = token.priceLevels[nextSellIndex + 1];
 
-        const activeToken = activeTokenService.getSingleToken(token.address);
-        logger.info(JSON.stringify(activeToken));
+        logger.info(
+          `${activeToken?.ticker} - [NEW]: nextBuy: ${activeToken?.nextBuy}, nextSell: ${activeToken?.nextSell}`
+        );
       } else {
         logger.info(`${token.ticker}: Hold`);
       }
@@ -125,7 +138,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 });
 
 app.get("/active-tokens", authenticateAPIKey, async (_req, res) => {
-  const tokens = activeTokenService.getActiveTokens();
+  const tokens = tokenService.getActiveTokens();
   res.status(200).json(tokens);
 });
 
@@ -139,8 +152,8 @@ app.post("/add-active-token", authenticateAPIKey, async (req, res) => {
     return;
   }
 
-  activeTokenService.addToken(body);
-  const updatedTokens = activeTokenService.getAllTokens();
+  tokenService.addToken(body);
+  const updatedTokens = tokenService.getAllTokens();
 
   if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
     logger.info("Token added successfully");
@@ -160,8 +173,8 @@ app.post("/update-active-tokens", authenticateAPIKey, async (req, res) => {
     return;
   }
 
-  activeTokenService.updateTokens(body);
-  const updatedTokens = activeTokenService.getAllTokens();
+  tokenService.updateTokens(body);
+  const updatedTokens = tokenService.getAllTokens();
 
   if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
     logger.info("Tokens updated successfully");

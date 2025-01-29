@@ -8,7 +8,11 @@ export const createLogger = () => {
       winston.format.timestamp({ format: () => new Date().toLocaleString() }),
       winston.format.printf(({ level, message, timestamp }) => {
         // Customize the log format to match "[info] | timestamp | message"
-        return `[${level}] | ${blueColorize(String(timestamp))} | ${message}`;
+        return `[${level}] | ${blueColorize(String(timestamp))} | ${
+          typeof message === "object"
+            ? JSON.stringify(message, null, 2)
+            : message
+        }`;
       })
     ),
     transports: [
@@ -17,9 +21,11 @@ export const createLogger = () => {
           winston.format.colorize(),
           winston.format.printf(({ level, message, timestamp }) => {
             // This printf will control the structure now
-            return `[${level}] | ${blueColorize(
-              String(timestamp)
-            )} | ${message}`;
+            return `[${level}] | ${blueColorize(String(timestamp))} | ${
+              typeof message === "object"
+                ? JSON.stringify(message, null, 2)
+                : message
+            }`;
           })
         ),
       }),
