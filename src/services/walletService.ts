@@ -114,6 +114,13 @@ export class WalletService {
           this.wallet.address
         );
 
+        this.logger.info(`Success! Transaction hash: ${tx.hash}`);
+        this.logger.info(`Gas used: ${gasUsed} RON`);
+        this.logger.info(`Final RON balance: ${finalRon} RON`);
+        this.logger.info(
+          `Final ${tokenSymbol} balance: ${finalToken} ${tokenSymbol}`
+        );
+        console.log("====================================");
         return {
           success: true,
           txHash: tx.hash,
