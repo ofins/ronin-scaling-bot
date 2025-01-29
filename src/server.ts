@@ -6,11 +6,12 @@ import { tokensSchema } from "./schema/token";
 import { swapSchema } from "./schema/trade";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import "./services/telegramService";
+import { sendMessage, sendSwapSuccess } from "./services/telegramService";
 import { TokenService } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
 import { createLogger } from "./utils/logger";
-dotenv.config();
 
+dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
 const logger = createLogger();
@@ -18,17 +19,21 @@ const logger = createLogger();
 app.use(helmet());
 app.use(express.json());
 
+let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
+
 // Token address is initialized when server starts
 const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 6000;
+const fetchInterval = 60000;
 
 app.get("/health-check", async (_req, res) => {
-  res.status(200).json({ status: "ok", uptime: process.uptime() });
+  const botStatus = botInterval ? "active" : "inactive"; // Check if interval is active
+  const intervalId = botInterval ? "Not None" : "None"; // Get the ID of the interval (or "None")
+  res
+    .status(200)
+    .json({ status: "ok", uptime: process.uptime(), botStatus, intervalId });
 });
-
-let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 app.post("/start", authenticateAPIKey, async (_req, res) => {
   if (botInterval) {
@@ -37,8 +42,6 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
   }
 
   const activeToken = tokenService.getActiveTokens();
-
-  logger.info(activeToken);
 
   const coinGeckoService = new CoinGeckoService();
   logger.info("Starting bot...");
@@ -95,7 +98,8 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
       if (shouldSwap === 1) {
         logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
-        await trade.swapExactRonForToken(
+        sendMessage(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
+        const result = await trade.swapExactRonForToken(
           token.address,
           token.swapInRonAmount,
           0.5
@@ -113,9 +117,11 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         logger.info(
           `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
+        sendSwapSuccess(result);
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
-        await trade.swapTokensForExactRon(
+        sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
+        const result = await trade.swapTokensForExactRon(
           token.address,
           token.swapInRonAmount,
           0.5
@@ -133,18 +139,14 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         logger.info(
           `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
         );
+        sendSwapSuccess(result);
       } else {
         logger.info(`${token.ticker}: Hold`);
       }
-
-      //   const tokenPriceInRon = tokenPrice.ron;
-      //   const priceLevels = token.priceLevels;
     });
   }, fetchInterval);
   res.status(200).json({ message: "Success", data: "Started" });
   return;
-  // run scanner
-  // if criteria is matched, execute swap ron
 });
 
 app.post("/stop", authenticateAPIKey, async (_req, res) => {
@@ -225,6 +227,7 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
         slippage
       );
       res.status(200).json(result);
+      sendSwapSuccess(result);
     } else if (direction === 2) {
       const result = await trade.swapTokensForExactRon(
         tokenAddress,
@@ -232,6 +235,7 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
         slippage
       );
       res.status(200).json(result);
+      sendSwapSuccess(result);
     }
   } catch (error) {
     res.status(500).json({ error: "An error occurred during swap" });

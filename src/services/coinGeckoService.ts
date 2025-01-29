@@ -11,6 +11,15 @@ export class CoinGeckoService {
     )}`;
     try {
       const { data } = await axios.get(url);
+      tokenAddresses.forEach((address) => {
+        if (!data.data.attributes.token_prices[address]) {
+          logger.error(`No price found for ${address}`);
+        } else {
+          logger.info(
+            `Price for ${address}: ${data.data.attributes.token_prices[address]}`
+          );
+        }
+      });
       return data;
     } catch (error) {
       logger.error(`Error fetching token prices: ${error}`);
