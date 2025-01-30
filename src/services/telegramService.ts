@@ -87,7 +87,7 @@ bot.onText(/\/active/, async (msg) => {
   console.log(chatId);
   try {
     const response = await axios.get(
-      `${process.env.BASE_URL}/active-tokens`,
+      `${process.env.BASE_URL}/tokens/active`,
       headers
     );
 

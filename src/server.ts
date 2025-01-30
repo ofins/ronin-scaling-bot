@@ -2,18 +2,19 @@ import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
 import { walletConfig } from "./config/wallet";
+import { CoinGeckoNetworkEnum } from "./enums/network";
 import { authenticateAPIKey } from "./middleware/auth";
-import { toggleSchema, tokensSchema } from "./schema/token";
+import tokenRoutes from "./router/tokenRouter";
+import { tokensSchema } from "./schema/token";
 import { swapSchema } from "./schema/trade";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import "./services/telegramService";
 import { sendMessage, sendSwapSuccess } from "./services/telegramService";
 import { TokenService } from "./services/tokenService";
-import { TradingService } from "./services/tradingService";
 import { WalletService } from "./services/walletService";
 import { SwapResult } from "./types";
 import { createLogger } from "./utils/logger";
-
+import { pyramidAlgo } from "./utils/trade";
 dotenv.config();
 const app = express();
 const port = process.env.PORT || 3000;
@@ -22,10 +23,12 @@ const logger = createLogger();
 app.use(helmet());
 app.use(express.json());
 
+const tokenService = new TokenService();
 let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 // Token address is initialized when server starts
-const tokenService = new TokenService();
+app.use("/tokens", tokenRoutes(tokenService));
+const wallet = new WalletService(walletConfig, logger);
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
 const fetchInterval = 60000 * 2.35;
@@ -47,13 +50,11 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
     return;
   }
 
-  const activeToken = tokenService.getActiveTokens();
+  //   const activeToken = tokenService.getActiveTokens();
 
   const coinGeckoService = new CoinGeckoService();
   logger.info("Starting bot...");
   logger.info("Fetch interval: " + fetchInterval / 1000 + " seconds");
-
-  const network = "ronin";
 
   botInterval = setInterval(async () => {
     const tokens = tokenService.getActiveTokens();
@@ -72,7 +73,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
 
     const data = await coinGeckoService.getMultiTokenPrice(
       tokens.map((a) => a.address),
-      network
+      CoinGeckoNetworkEnum.RON
     );
 
     if (!data || !data.data.attributes.token_prices) {
@@ -81,6 +82,8 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
     }
 
     const prices = data.data.attributes.token_prices || {};
+
+    // make all keys lowercase
     const lowerCasePrices = Object.keys(prices).reduce((acc: any, key) => {
       acc[key.toLowerCase()] = prices[key];
       return acc;
@@ -99,17 +102,12 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
         return;
       }
 
-      const trade = new TradingService();
-      const shouldSwap = trade.checkShouldSwap(
-        tokenPrice,
-        token.nextBuy,
-        token.nextSell
-      );
+      const shouldSwap = pyramidAlgo(tokenPrice, token.nextBuy, token.nextSell);
 
       if (shouldSwap === 1) {
         logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
         sendMessage(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
-        const result = await trade.swapRONForExactTokens(
+        const result = await wallet.swapRONForExactTokens(
           token.address,
           token.swapAmountInToken,
           0.5
@@ -134,7 +132,7 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
       } else if (shouldSwap === 2) {
         logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
         sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
-        const result = await trade.swapExactTokensForRon(
+        const result = await wallet.swapExactTokensForRon(
           token.address,
           token.swapAmountInToken,
           0.5
@@ -162,7 +160,6 @@ app.post("/start", authenticateAPIKey, async (_req, res) => {
     });
   }, fetchInterval);
   res.status(200).json({ message: "Success", data: "Started" });
-  return;
 });
 
 app.post("/stop", authenticateAPIKey, async (_req, res) => {
@@ -176,75 +173,6 @@ app.post("/stop", authenticateAPIKey, async (_req, res) => {
   }
 });
 
-app.get("/active-tokens", authenticateAPIKey, async (_req, res) => {
-  const tokens = tokenService.getActiveTokens();
-  res.status(200).json(tokens);
-});
-
-app.post("/add-active-token", authenticateAPIKey, async (req, res) => {
-  const body = req.body;
-
-  try {
-    tokensSchema.parse(body);
-  } catch (error) {
-    res.status(400).json({ error: "Invalid schema" });
-    return;
-  }
-
-  tokenService.addToken(body);
-  const updatedTokens = tokenService.getAllTokens();
-
-  if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
-    logger.info("Token added successfully");
-    res.status(200).json({ message: "Success", updatedTokens });
-  } else {
-    res.status(500).json({ error: "An error occurred" });
-  }
-});
-
-app.post("/update-tokens", authenticateAPIKey, async (req, res) => {
-  const body = req.body;
-
-  try {
-    tokensSchema.parse(body);
-  } catch (error) {
-    res.status(400).json({ error: "Invalid schema" });
-    return;
-  }
-
-  tokenService.updateTokens(body);
-  const updatedTokens = tokenService.getAllTokens();
-
-  if (JSON.stringify(updatedTokens) === JSON.stringify(body)) {
-    logger.info("Tokens updated successfully");
-    res.status(200).json({ message: "Success", updatedTokens });
-  } else {
-    res.status(500).json({ error: "An error occurred" });
-  }
-});
-
-app.post("/toggle-token", authenticateAPIKey, async (req, res) => {
-  const { ticker } = req.body;
-
-  try {
-    toggleSchema.parse(req.body);
-  } catch (error) {
-    res.status(400).json({ error: "Invalid schema" });
-  }
-
-  // tokenService.toggleToken(address);
-  const token = tokenService.getSingleTokenByTicker(ticker);
-  if (!token) {
-    res.status(404).json({ error: "Token not found" });
-    return;
-  }
-
-  const updatedToken = { ...token, isActive: !token.isActive };
-  tokenService.updateSingleToken(token.address, updatedToken);
-
-  res.status(200).json({ message: "Success", updatedToken });
-});
-
 app.post("/swap", authenticateAPIKey, async (req, res) => {
   const { tokenAddress, amount, slippage, direction } = req.body;
 
@@ -256,10 +184,8 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
   }
 
   try {
-    const trade = new TradingService();
-
     if (direction === 1) {
-      const result = await trade.swapRONForExactTokens(
+      const result = await wallet.swapRONForExactTokens(
         tokenAddress,
         amount,
         slippage
@@ -268,7 +194,7 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
       sendSwapSuccess(result as SwapResult);
       logger.info(result);
     } else if (direction === 2) {
-      const result = await trade.swapExactTokensForRon(
+      const result = await wallet.swapExactTokensForRon(
         tokenAddress,
         amount,
         slippage
@@ -286,7 +212,7 @@ app.listen(port, () => {
   logger.info(`Server running on port ${port}`);
 });
 
-app.get("/wallet", async (_req, res) => {
+app.get("/wallet", authenticateAPIKey, async (_req, res) => {
   try {
     const walletService = new WalletService(walletConfig, logger);
 

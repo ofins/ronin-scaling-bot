@@ -2,6 +2,10 @@ import { ethers } from "ethers";
 import { Logger } from "winston";
 import { ERC20_ABI, ROUTER_ABI } from "../config/routerAbi";
 import { SwapResult, TokenSwapConfig } from "../types";
+import {
+  calculateMaxInputWithSlippage,
+  calculateMinOutputWithSlippage,
+} from "../utils/wallet";
 import { sendMessage } from "./telegramService";
 
 export class WalletService {
@@ -53,244 +57,61 @@ export class WalletService {
     return await tokenContract.decimals();
   }
 
-  async swapExactRonForToken(
-    tokenAddress: string,
-    amountRon: number,
-    slippage: number = 0.5
-  ): Promise<SwapResult> {
-    try {
-      // Get initial balances
-      const initialRon = ethers.formatEther(
-        await this.provider.getBalance(this.wallet.address)
-      );
-      const initialToken = await this.getTokenBalance(
-        tokenAddress,
-        this.wallet.address
-      );
-      const tokenSymbol = await this.getTokenSymbol(tokenAddress);
+  private async getInitialBalances(tokenAddress: string) {
+    const initialRon = ethers.formatEther(
+      await this.provider.getBalance(this.wallet.address)
+    );
+    const initialToken = await this.getTokenBalance(
+      tokenAddress,
+      this.wallet.address
+    );
+    const tokenSymbol = await this.getTokenSymbol(tokenAddress);
 
-      this.logger.info(`Initial RON balance: ${initialRon} RON`);
-      this.logger.info(
-        `Initial ${tokenSymbol} balance: ${initialToken} ${tokenSymbol}`
-      );
+    this.logger.info(`Initial RON balance: ${initialRon} RON`);
+    this.logger.info(
+      `Initial ${tokenSymbol} balance: ${initialToken} ${tokenSymbol}`
+    );
 
-      const routerContract = new ethers.Contract(
-        this.config.routerAddress,
-        ROUTER_ABI,
-        this.wallet
-      );
-
-      const amountRonWei = ethers.parseEther(amountRon.toString());
-      this.logger.info(
-        `Swapping ${amountRon} RON (${amountRonWei.toString()} Wei) for ${tokenSymbol}...`
-      );
-
-      // Set up trade path
-      const path = [this.config.wronAddress, tokenAddress];
-
-      // Get expected output amount
-      const amounts = await routerContract.getAmountsOut(amountRonWei, path);
-      const expectedTokens = ethers.formatEther(amounts[1]);
-      this.logger.info(
-        `Expected ${tokenSymbol} output: ${expectedTokens} ${tokenSymbol}`
-      );
-
-      // Calculate minimum output with slippage tolerance
-      const minTokens =
-        amounts[1] -
-        (amounts[1] * BigInt(Math.floor(slippage * 100))) / BigInt(10000);
-
-      // Set deadline to 20 minutes from now
-      const deadline = Math.floor(Date.now() / 1000) + 1200;
-
-      // Build and send transaction
-      const tx = await routerContract.swapRONForExactTokens(
-        minTokens,
-        path,
-        this.wallet.address,
-        deadline,
-        {
-          value: amountRonWei,
-          gasLimit: 500000,
-        }
-      );
-
-      this.logger.info(`Transaction sent: ${tx.hash}`);
-      this.logger.info("Waiting for transaction to complete...");
-
-      const receipt = await tx.wait();
-
-      if (receipt && receipt.status === 1) {
-        const gasUsed = ethers.formatEther(receipt.gasUsed * receipt.gasPrice);
-        const finalRon = ethers.formatEther(
-          await this.provider.getBalance(this.wallet.address)
-        );
-        const finalToken = await this.getTokenBalance(
-          tokenAddress,
-          this.wallet.address
-        );
-
-        this.logger.info(`Success!`);
-        this.logger.info(`Gas used: ${gasUsed} RON`);
-        this.logger.info(`Final RON balance: ${finalRon} RON`);
-        this.logger.info(
-          `Final ${tokenSymbol} balance: ${finalToken} ${tokenSymbol}`
-        );
-        console.log("====================================");
-        return {
-          success: true,
-          txHash: tx.hash,
-          gasUsed,
-          initialBalance: {
-            ron: initialRon,
-            token: initialToken,
-          },
-          finalBalance: {
-            ron: finalRon,
-            token: finalToken,
-          },
-        };
-      }
-
-      return {
-        success: false,
-        error: "Transaction failed",
-      };
-    } catch (error) {
-      this.logger.error(`Error during swap: ${error}`);
-      sendMessage(`Error during swap: ${error}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
-    }
+    return {
+      initialRon,
+      initialToken,
+      tokenSymbol,
+    };
   }
 
-  async swapExactTokensForRon(
-    tokenAddress: string,
-    amountTokens: number,
-    slippage: number = 0.5
+  private async processReceipt(
+    receipt: ethers.TransactionReceipt,
+    tokenAddress: string
   ) {
-    try {
-      // Get initial balances
-      const initialRon = ethers.formatEther(
-        await this.provider.getBalance(this.wallet.address)
-      );
-      const initialToken = await this.getTokenBalance(
-        tokenAddress,
-        this.wallet.address
-      );
-      const tokenSymbol = await this.getTokenSymbol(tokenAddress);
-
-      this.logger.info(`Initial RON balance: ${initialRon} RON`);
-      this.logger.info(
-        `Initial ${tokenSymbol} balance: ${initialToken} ${tokenSymbol}`
-      );
-
-      const routerContract = new ethers.Contract(
-        this.config.routerAddress,
-        ROUTER_ABI,
-        this.wallet
-      );
-
-      const tokenContract = new ethers.Contract(
-        tokenAddress,
-        ERC20_ABI,
-        this.wallet
-      );
-
-      const amountTokensWei = ethers.parseUnits(
-        amountTokens.toString(),
-        await tokenContract.decimals()
-      );
-      this.logger.info(
-        `Swapping ${amountTokens} ${tokenSymbol} (${amountTokensWei.toString()} Wei) for RON...`
-      );
-
-      // Set up trade path
-      const path = [tokenAddress, this.config.wronAddress];
-
-      // Get expected output amount
-      const amounts = await routerContract.getAmountsOut(amountTokensWei, path);
-      const expectedRon = ethers.formatEther(amounts[1]);
-      this.logger.info(`Expected RON output: ${expectedRon} RON`);
-
-      // Calculate minimum output with slippage tolerance
-      const minRon =
-        amounts[1] -
-        (amounts[1] * BigInt(Math.floor(slippage * 100))) / BigInt(10000);
-
-      // Set deadline to 20 minutes from now
-      const deadline = Math.floor(Date.now() / 1000) + 1200;
-
-      const approvalTx = await tokenContract.approve(
-        this.config.routerAddress,
-        amountTokensWei
-      );
-      await approvalTx.wait();
-      this.logger.info("Token approval confirmed");
-
-      // Build and send transaction
-      const tx = await routerContract.swapExactTokensForRON(
-        amountTokensWei,
-        minRon,
-        path,
-        this.wallet.address,
-        deadline,
-        {
-          gasLimit: 500000,
-        }
-      );
-
-      this.logger.info(`Transaction sent: ${tx.hash}`);
-      this.logger.info("Waiting for transaction to complete...");
-
-      const receipt = await tx.wait();
-
-      if (receipt && receipt.status === 1) {
-        const gasUsed = ethers.formatEther(receipt.gasUsed * receipt.gasPrice);
-        const finalRon = ethers.formatEther(
-          await this.provider.getBalance(this.wallet.address)
-        );
-        const finalToken = await this.getTokenBalance(
-          tokenAddress,
-          this.wallet.address
-        );
-
-        this.logger.info(`Success!`);
-        this.logger.info(`Gas used: ${gasUsed} RON`);
-        this.logger.info(`Final RON balance: ${finalRon} RON`);
-        this.logger.info(
-          `Final ${tokenSymbol} balance: ${finalToken} ${tokenSymbol}`
-        );
-        console.log("====================================");
-        return {
-          success: true,
-          txHash: tx.hash,
-          gasUsed,
-          initialBalance: {
-            ron: initialRon,
-            token: initialToken,
-          },
-          finalBalance: {
-            ron: finalRon,
-            token: finalToken,
-          },
-        };
-      }
-
-      return {
-        success: false,
-        error: "Transaction failed",
-      };
-    } catch (error) {
-      this.logger.error(`Error during swap: ${error}`);
-      sendMessage(`Error during swap: ${error}`);
-      return {
-        success: false,
-        error: error instanceof Error ? error.message : "Unknown error",
-      };
+    if (!receipt || receipt.status !== 1) {
+      return { success: false, message: "Invalid receipt" };
     }
+
+    const gasUsed = ethers.formatEther(
+      BigInt(receipt.gasUsed) * BigInt(receipt.gasPrice)
+    );
+
+    const finalRon = ethers.formatEther(
+      await this.provider.getBalance(this.wallet.address)
+    );
+
+    const finalToken = await this.getTokenBalance(
+      tokenAddress,
+      this.wallet.address
+    );
+
+    this.logger.info(`✅ Success!`);
+    this.logger.info(`⛽ Gas used: ${gasUsed} RON`);
+    this.logger.info(`💰 Final RON balance: ${finalRon} RON`);
+    this.logger.info(`🔄 Final Token balance: ${finalToken} WRON`);
+    console.log("====================================");
+
+    return {
+      success: true,
+      gasUsed,
+      finalRon,
+      finalToken,
+    };
   }
 
   async swapTokensForExactRon(
@@ -299,21 +120,8 @@ export class WalletService {
     slippage: number = 0.5
   ): Promise<SwapResult> {
     try {
-      // Get initial balances
-      const initialRon = ethers.formatEther(
-        await this.provider.getBalance(this.wallet.address)
-      );
-      const initialToken = await this.getTokenBalance(
-        tokenAddress,
-        this.wallet.address
-      );
-      const tokenSymbol = await this.getTokenSymbol(tokenAddress);
-      const tokenDecimals = await this.getTokenDecimals(tokenAddress);
-
-      this.logger.info(`Initial RON balance: ${initialRon} RON`);
-      this.logger.info(
-        `Initial ${tokenSymbol} balance: ${initialToken} ${tokenSymbol}`
-      );
+      const { initialRon, initialToken, tokenSymbol } =
+        await this.getInitialBalances(tokenAddress);
 
       const routerContract = new ethers.Contract(
         this.config.routerAddress,
@@ -321,24 +129,18 @@ export class WalletService {
         this.wallet
       );
 
-      // Convert desired RON output to Wei
       const amountRonOutWei = ethers.parseEther(amountRonOut.toString());
-
-      // Set up trade path
       const path = [tokenAddress, this.config.wronAddress];
-
-      // Get required input amount
       const amounts = await routerContract.getAmountsIn(amountRonOutWei, path);
+      const tokenDecimals = await this.getTokenDecimals(tokenAddress);
       const requiredTokens = ethers.formatUnits(amounts[0], tokenDecimals);
+
       this.logger.info(
         `Required ${tokenSymbol} input: ${requiredTokens} ${tokenSymbol} to get ${amountRonOut} RON`
       );
 
       // Calculate maximum input with slippage tolerance
-      const maxTokensIn =
-        amounts[0] +
-        (amounts[0] * BigInt(Math.floor(slippage * 100))) / BigInt(10000);
-
+      const maxTokensIn = calculateMaxInputWithSlippage(amounts[0], slippage);
       const deadline = Math.floor(Date.now() / 1000) + 1200;
 
       const tokenContract = new ethers.Contract(
@@ -371,33 +173,193 @@ export class WalletService {
 
       const receipt = await tx.wait();
 
-      if (receipt && receipt.status === 1) {
-        const gasUsed = ethers.formatEther(receipt.gasUsed * receipt.gasPrice);
-        const finalRon = ethers.formatEther(
-          await this.provider.getBalance(this.wallet.address)
-        );
-        const finalToken = await this.getTokenBalance(
-          tokenAddress,
-          this.wallet.address
-        );
-        this.logger.info(`Success!`);
-        this.logger.info(`Gas used: ${gasUsed} RON`);
-        this.logger.info(`Final RON balance: ${finalRon} RON`);
-        this.logger.info(
-          `Final ${tokenSymbol} balance: ${finalToken} ${tokenSymbol}`
-        );
-        console.log("====================================");
+      const { success, gasUsed, finalRon, finalToken } =
+        await this.processReceipt(receipt, tokenAddress);
+
+      if (success) {
         return {
-          success: true,
+          success,
           txHash: tx.hash,
-          gasUsed,
+          gasUsed: gasUsed,
           initialBalance: {
             ron: initialRon,
             token: initialToken,
           },
           finalBalance: {
-            ron: finalRon,
-            token: finalToken,
+            ron: finalRon || "",
+            token: finalToken || "",
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: "Transaction failed",
+      };
+    } catch (error) {
+      this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async swapExactRonForToken(
+    tokenAddress: string,
+    amountRon: number,
+    slippage: number = 0.5
+  ): Promise<SwapResult> {
+    try {
+      const { initialRon, initialToken, tokenSymbol } =
+        await this.getInitialBalances(tokenAddress);
+
+      const routerContract = new ethers.Contract(
+        this.config.routerAddress,
+        ROUTER_ABI,
+        this.wallet
+      );
+
+      const amountRonWei = ethers.parseEther(amountRon.toString());
+      this.logger.info(
+        `Swapping ${amountRon} RON (${amountRonWei.toString()} Wei) for ${tokenSymbol}...`
+      );
+
+      const path = [this.config.wronAddress, tokenAddress];
+      const amounts = await routerContract.getAmountsOut(amountRonWei, path);
+      const expectedTokens = ethers.formatEther(amounts[1]);
+      const minTokens = calculateMinOutputWithSlippage(amounts[1], slippage);
+      const deadline = Math.floor(Date.now() / 1000) + 1200; // 20 mins
+
+      this.logger.info(
+        `Expected ${tokenSymbol} output: ${expectedTokens} ${tokenSymbol}`
+      );
+
+      const tx = await routerContract.swapRONForExactTokens(
+        minTokens,
+        path,
+        this.wallet.address,
+        deadline,
+        {
+          value: amountRonWei,
+          gasLimit: 500000,
+        }
+      );
+
+      this.logger.info(`Transaction sent: ${tx.hash}`);
+      this.logger.info("Waiting for transaction to complete...");
+
+      const receipt = await tx.wait();
+
+      const { success, gasUsed, finalRon, finalToken } =
+        await this.processReceipt(receipt, tokenAddress);
+
+      if (success) {
+        return {
+          success,
+          txHash: tx.hash,
+          gasUsed: gasUsed,
+          initialBalance: {
+            ron: initialRon,
+            token: initialToken,
+          },
+          finalBalance: {
+            ron: finalRon || "",
+            token: finalToken || "",
+          },
+        };
+      }
+
+      return {
+        success: false,
+        error: "Transaction failed",
+      };
+    } catch (error) {
+      this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      };
+    }
+  }
+
+  async swapExactTokensForRon(
+    tokenAddress: string,
+    amountTokens: number,
+    slippage: number = 0.5
+  ) {
+    try {
+      const { initialRon, initialToken, tokenSymbol } =
+        await this.getInitialBalances(tokenAddress);
+
+      const routerContract = new ethers.Contract(
+        this.config.routerAddress,
+        ROUTER_ABI,
+        this.wallet
+      );
+
+      const tokenContract = new ethers.Contract(
+        tokenAddress,
+        ERC20_ABI,
+        this.wallet
+      );
+
+      const amountTokensWei = ethers.parseUnits(
+        amountTokens.toString(),
+        await tokenContract.decimals()
+      );
+      this.logger.info(
+        `Swapping ${amountTokens} ${tokenSymbol} (${amountTokensWei.toString()} Wei) for RON...`
+      );
+
+      const path = [tokenAddress, this.config.wronAddress];
+      const amounts = await routerContract.getAmountsOut(amountTokensWei, path);
+      const expectedRon = ethers.formatEther(amounts[1]);
+      this.logger.info(`Expected RON output: ${expectedRon} RON`);
+
+      const minRon = calculateMinOutputWithSlippage(amounts[1], slippage);
+      const deadline = Math.floor(Date.now() / 1000) + 1200;
+
+      const approvalTx = await tokenContract.approve(
+        this.config.routerAddress,
+        amountTokensWei
+      );
+      await approvalTx.wait();
+      this.logger.info("Token approval confirmed");
+
+      const tx = await routerContract.swapExactTokensForRON(
+        amountTokensWei,
+        minRon,
+        path,
+        this.wallet.address,
+        deadline,
+        {
+          gasLimit: 500000,
+        }
+      );
+
+      this.logger.info(`Transaction sent: ${tx.hash}`);
+      this.logger.info("Waiting for transaction to complete...");
+
+      const receipt = await tx.wait();
+
+      const { success, gasUsed, finalRon, finalToken } =
+        await this.processReceipt(receipt, tokenAddress);
+
+      if (success) {
+        return {
+          success,
+          txHash: tx.hash,
+          gasUsed: gasUsed,
+          initialBalance: {
+            ron: initialRon,
+            token: initialToken,
+          },
+          finalBalance: {
+            ron: finalRon || "",
+            token: finalToken || "",
           },
         };
       }
@@ -422,21 +384,8 @@ export class WalletService {
     slippage: number = 0.5
   ) {
     try {
-      // Get initial balances
-      const initialRon = ethers.formatEther(
-        await this.provider.getBalance(this.wallet.address)
-      );
-      const initialToken = await this.getTokenBalance(
-        tokenAddress,
-        this.wallet.address
-      );
-      const tokenSymbol = await this.getTokenSymbol(tokenAddress);
-      const tokenDecimals = await this.getTokenDecimals(tokenAddress);
-
-      this.logger.info(`Initial RON balance: ${initialRon} RON`);
-      this.logger.info(
-        `Initial ${tokenSymbol} balance: ${initialToken} ${tokenSymbol}`
-      );
+      const { initialRon, initialToken, tokenSymbol } =
+        await this.getInitialBalances(tokenAddress);
 
       const routerContract = new ethers.Contract(
         this.config.routerAddress,
@@ -445,29 +394,24 @@ export class WalletService {
       );
 
       // Convert desired token output to Wei
+      const tokenDecimals = await this.getTokenDecimals(tokenAddress);
       const amountTokensOutWei = ethers.parseUnits(
         amountTokensOut.toString(),
         tokenDecimals
       );
-
-      // Set up trade path
       const path = [this.config.wronAddress, tokenAddress];
-
-      // Get required input amount
       const amounts = await routerContract.getAmountsIn(
         amountTokensOutWei,
         path
       );
       const requiredRon = ethers.formatEther(amounts[0]);
+
       this.logger.info(
         `Required RON input: ${requiredRon} RON to get ${amountTokensOut} ${tokenSymbol}`
       );
 
       // Calculate maximum input with slippage tolerance
-      const maxRonIn =
-        amounts[0] +
-        (amounts[0] * BigInt(Math.floor(slippage * 100))) / BigInt(10000);
-
+      const maxRonIn = calculateMaxInputWithSlippage(amounts[0], slippage);
       const deadline = Math.floor(Date.now() / 1000) + 1200;
 
       // Build and send transaction
@@ -487,36 +431,29 @@ export class WalletService {
 
       const receipt = await tx.wait();
 
-      if (receipt && receipt.status === 1) {
-        const gasUsed = ethers.formatEther(receipt.gasUsed * receipt.gasPrice);
-        const finalRon = ethers.formatEther(
-          await this.provider.getBalance(this.wallet.address)
-        );
-        const finalToken = await this.getTokenBalance(
-          tokenAddress,
-          this.wallet.address
-        );
-        this.logger.info(`Success!`);
-        this.logger.info(`Gas used: ${gasUsed} RON`);
-        this.logger.info(`Final RON balance: ${finalRon} RON`);
-        this.logger.info(
-          `Final ${tokenSymbol} balance: ${finalToken} ${tokenSymbol}`
-        );
-        console.log("====================================");
+      const { success, gasUsed, finalRon, finalToken } =
+        await this.processReceipt(receipt, tokenAddress);
+
+      if (success) {
         return {
-          success: true,
+          success,
           txHash: tx.hash,
-          gasUsed,
+          gasUsed: gasUsed,
           initialBalance: {
             ron: initialRon,
             token: initialToken,
           },
           finalBalance: {
-            ron: finalRon,
-            token: finalToken,
+            ron: finalRon || "",
+            token: finalToken || "",
           },
         };
       }
+
+      return {
+        success: false,
+        error: "Transaction failed",
+      };
     } catch (error) {
       this.logger.error(`Error during swap: ${error}`);
       sendMessage(`Error during swap: ${error}`);
