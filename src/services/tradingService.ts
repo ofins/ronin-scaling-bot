@@ -1,5 +1,6 @@
 import { walletConfig } from "../config/wallet";
 import { createLogger } from "../utils/logger";
+import { sendMessage } from "./telegramService";
 import { WalletService } from "./walletService";
 
 const logger = createLogger();
@@ -34,6 +35,7 @@ export class TradingService {
       return result;
     } catch (error) {
       logger.error(`Error processing swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       throw error;
     }
   }
@@ -54,6 +56,7 @@ export class TradingService {
       return result;
     } catch (error) {
       logger.error(`Error processing swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       throw error;
     }
   }
@@ -74,6 +77,7 @@ export class TradingService {
       return result;
     } catch (error) {
       logger.error(`Error processing swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       throw error;
     }
   }
@@ -94,6 +98,7 @@ export class TradingService {
       return result;
     } catch (error) {
       logger.error(`Error processing swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       throw error;
     }
   }

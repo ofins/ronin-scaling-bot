@@ -33,9 +33,12 @@ const fetchInterval = 60000 * 2.35;
 app.get("/health-check", async (_req, res) => {
   const botStatus = botInterval ? "active" : "inactive"; // Check if interval is active
   const intervalId = botInterval ? "Not None" : "None"; // Get the ID of the interval (or "None")
-  res
-    .status(200)
-    .json({ status: "ok", uptime: process.uptime(), botStatus, intervalId });
+  res.status(200).json({
+    status: "ok",
+    uptime: `${(process.uptime() / 86400).toFixed(2)} days`,
+    botStatus,
+    intervalId,
+  });
 });
 
 app.post("/start", authenticateAPIKey, async (_req, res) => {

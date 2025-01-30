@@ -16,6 +16,8 @@ const headers = {
 
 const chatId = process.env.TELEGRAM_CHAT_ID!;
 
+bot.sendMessage(chatId, "Server restarted 🔄");
+
 bot.onText(/\/hc/, async (msg) => {
   const chatId = msg.chat.id;
   try {
@@ -82,6 +84,7 @@ bot.onText(/\/toggle (.+)/, async (msg, match) => {
 
 bot.onText(/\/active/, async (msg) => {
   const chatId = msg.chat.id;
+  console.log(chatId);
   try {
     const response = await axios.get(
       `${process.env.BASE_URL}/active-tokens`,

@@ -1,5 +1,6 @@
 import axios from "axios";
 import { createLogger } from "../utils/logger";
+import { sendMessage } from "./telegramService";
 
 const logger = createLogger();
 
@@ -14,6 +15,7 @@ export class CoinGeckoService {
       return data;
     } catch (error) {
       logger.error(`Error fetching token prices: ${error}`);
+      sendMessage(`Error fetching token prices: ${error}`);
     }
   }
 }

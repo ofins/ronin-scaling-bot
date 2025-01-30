@@ -2,6 +2,7 @@ import { ethers } from "ethers";
 import { Logger } from "winston";
 import { ERC20_ABI, ROUTER_ABI } from "../config/routerAbi";
 import { SwapResult, TokenSwapConfig } from "../types";
+import { sendMessage } from "./telegramService";
 
 export class WalletService {
   private provider: ethers.JsonRpcProvider;
@@ -157,6 +158,7 @@ export class WalletService {
       };
     } catch (error) {
       this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -283,6 +285,7 @@ export class WalletService {
       };
     } catch (error) {
       this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -405,6 +408,7 @@ export class WalletService {
       };
     } catch (error) {
       this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
@@ -515,6 +519,7 @@ export class WalletService {
       }
     } catch (error) {
       this.logger.error(`Error during swap: ${error}`);
+      sendMessage(`Error during swap: ${error}`);
       return {
         success: false,
         error: error instanceof Error ? error.message : "Unknown error",
