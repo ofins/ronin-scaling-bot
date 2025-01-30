@@ -7,7 +7,7 @@ import { swapSchema } from "./schema/trade";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import "./services/telegramService";
 import { sendMessage, sendSwapSuccess } from "./services/telegramService";
-import { TokenService } from "./services/tokenService";
+import { TokenService, TokenType } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
 import { SwapResult } from "./types";
 import { createLogger } from "./utils/logger";
@@ -26,7 +26,7 @@ let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 15000;
+const fetchInterval = 60000;
 
 app.get("/health-check", async (_req, res) => {
   const botStatus = botInterval ? "active" : "inactive"; // Check if interval is active
@@ -197,7 +197,7 @@ app.post("/add-active-token", authenticateAPIKey, async (req, res) => {
   }
 });
 
-app.post("/update-active-tokens", authenticateAPIKey, async (req, res) => {
+app.post("/update-tokens", authenticateAPIKey, async (req, res) => {
   const body = req.body;
 
   try {
@@ -216,6 +216,22 @@ app.post("/update-active-tokens", authenticateAPIKey, async (req, res) => {
   } else {
     res.status(500).json({ error: "An error occurred" });
   }
+});
+
+app.post("/toggle-token", authenticateAPIKey, async (req, res) => {
+  const { address } = req.body;
+
+  if (!address) {
+    res.status(400).json({ error: "Invalid schema" });
+    return;
+  }
+
+  // tokenService.toggleToken(address);
+  const token = tokenService.getSingleToken(address);
+  const updatedToken = { ...token, isActive: !token?.isActive };
+  tokenService.updateSingleToken(address, updatedToken as TokenType);
+
+  res.status(200).json({ message: "Success", updatedToken });
 });
 
 app.post("/swap", authenticateAPIKey, async (req, res) => {

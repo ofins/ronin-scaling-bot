@@ -1,4 +1,4 @@
-type TokenType = {
+export type TokenType = {
   address: string;
   isActive: boolean;
   ticker: string;
@@ -25,6 +25,11 @@ export class TokenService {
 
   public getSingleToken(address: string) {
     return this.tokens.find((a) => a.address === address);
+  }
+
+  public updateSingleToken(address: string, token: TokenType) {
+    const index = this.tokens.findIndex((a) => a.address === address);
+    this.tokens[index] = token;
   }
 
   public addToken(address: TokenType) {
