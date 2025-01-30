@@ -1,3 +1,5 @@
+import tokens from "./testTokens";
+
 export type TokenType = {
   address: string;
   isActive: boolean;
@@ -12,7 +14,7 @@ export class TokenService {
   private tokens: TokenType[];
 
   constructor() {
-    this.tokens = [];
+    this.tokens = tokens;
   }
 
   public getActiveTokens() {
@@ -25,6 +27,12 @@ export class TokenService {
 
   public getSingleToken(address: string) {
     return this.tokens.find((a) => a.address === address);
+  }
+
+  public getSingleTokenByTicker(ticker: string) {
+    return this.tokens.find(
+      (a) => a.ticker.toLowerCase() === ticker.toLowerCase()
+    );
   }
 
   public updateSingleToken(address: string, token: TokenType) {

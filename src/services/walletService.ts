@@ -14,6 +14,12 @@ export class WalletService {
     this.logger = logger;
   }
 
+  public async getWalletBalance(): Promise<string> {
+    return ethers.formatEther(
+      await this.provider.getBalance(this.wallet.address)
+    );
+  }
+
   private async getTokenBalance(
     tokenAddress: string,
     walletAddress: string

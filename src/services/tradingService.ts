@@ -1,3 +1,4 @@
+import { walletConfig } from "../config/wallet";
 import { createLogger } from "../utils/logger";
 import { WalletService } from "./walletService";
 
@@ -23,15 +24,7 @@ export class TradingService {
     slippage: number
   ) {
     try {
-      const walletService = new WalletService(
-        {
-          privateKey: process.env.PRIVATE_KEY!,
-          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
-          routerAddress: process.env.ROUTER_ADDRESS!,
-          wronAddress: process.env.WRON_ADDRESS!,
-        },
-        logger
-      );
+      const walletService = new WalletService(walletConfig, logger);
 
       const result = await walletService.swapExactRonForToken(
         tokenAddress,
@@ -51,15 +44,7 @@ export class TradingService {
     slippage: number
   ) {
     try {
-      const walletService = new WalletService(
-        {
-          privateKey: process.env.PRIVATE_KEY!,
-          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
-          routerAddress: process.env.ROUTER_ADDRESS!,
-          wronAddress: process.env.WRON_ADDRESS!,
-        },
-        logger
-      );
+      const walletService = new WalletService(walletConfig, logger);
 
       const result = await walletService.swapTokensForExactRon(
         tokenAddress,
@@ -79,15 +64,7 @@ export class TradingService {
     slippage: number
   ) {
     try {
-      const walletService = new WalletService(
-        {
-          privateKey: process.env.PRIVATE_KEY!,
-          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
-          routerAddress: process.env.ROUTER_ADDRESS!,
-          wronAddress: process.env.WRON_ADDRESS!,
-        },
-        logger
-      );
+      const walletService = new WalletService(walletConfig, logger);
 
       const result = await walletService.swapRONForExactTokens(
         tokenAddress,
@@ -107,15 +84,7 @@ export class TradingService {
     slippage: number
   ) {
     try {
-      const walletService = new WalletService(
-        {
-          privateKey: process.env.PRIVATE_KEY!,
-          roninRpcUrl: process.env.RONIN_MAINNET_RPC!,
-          routerAddress: process.env.ROUTER_ADDRESS!,
-          wronAddress: process.env.WRON_ADDRESS!,
-        },
-        logger
-      );
+      const walletService = new WalletService(walletConfig, logger);
 
       const result = await walletService.swapExactTokensForRon(
         tokenAddress,

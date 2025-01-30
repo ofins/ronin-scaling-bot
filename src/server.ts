@@ -1,14 +1,16 @@
 import dotenv from "dotenv";
 import express from "express";
 import helmet from "helmet";
+import { walletConfig } from "./config/wallet";
 import { authenticateAPIKey } from "./middleware/auth";
-import { tokensSchema } from "./schema/token";
+import { toggleSchema, tokensSchema } from "./schema/token";
 import { swapSchema } from "./schema/trade";
 import { CoinGeckoService } from "./services/coinGeckoService";
 import "./services/telegramService";
 import { sendMessage, sendSwapSuccess } from "./services/telegramService";
-import { TokenService, TokenType } from "./services/tokenService";
+import { TokenService } from "./services/tokenService";
 import { TradingService } from "./services/tradingService";
+import { WalletService } from "./services/walletService";
 import { SwapResult } from "./types";
 import { createLogger } from "./utils/logger";
 
@@ -219,17 +221,23 @@ app.post("/update-tokens", authenticateAPIKey, async (req, res) => {
 });
 
 app.post("/toggle-token", authenticateAPIKey, async (req, res) => {
-  const { address } = req.body;
+  const { ticker } = req.body;
 
-  if (!address) {
+  try {
+    toggleSchema.parse(req.body);
+  } catch (error) {
     res.status(400).json({ error: "Invalid schema" });
-    return;
   }
 
   // tokenService.toggleToken(address);
-  const token = tokenService.getSingleToken(address);
-  const updatedToken = { ...token, isActive: !token?.isActive };
-  tokenService.updateSingleToken(address, updatedToken as TokenType);
+  const token = tokenService.getSingleTokenByTicker(ticker);
+  if (!token) {
+    res.status(404).json({ error: "Token not found" });
+    return;
+  }
+
+  const updatedToken = { ...token, isActive: !token.isActive };
+  tokenService.updateSingleToken(token.address, updatedToken);
 
   res.status(200).json({ message: "Success", updatedToken });
 });
@@ -273,4 +281,15 @@ app.post("/swap", authenticateAPIKey, async (req, res) => {
 
 app.listen(port, () => {
   logger.info(`Server running on port ${port}`);
+});
+
+app.get("/wallet", async (_req, res) => {
+  try {
+    const walletService = new WalletService(walletConfig, logger);
+
+    const result = await walletService.getWalletBalance();
+    res.status(200).json(result);
+  } catch (error) {
+    res.status(500).json({ error: "An error occurred" });
+  }
 });

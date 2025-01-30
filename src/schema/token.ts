@@ -11,3 +11,7 @@ export const tokenSchema = z.object({
 });
 
 export const tokensSchema = z.array(tokenSchema);
+
+export const toggleSchema = z.object({
+  ticker: z.string(),
+});
