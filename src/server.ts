@@ -28,7 +28,7 @@ let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 const tokenService = new TokenService();
 
 // const fetchInterval = 60 * 4.7 * 1000; // 4.7 minutes
-const fetchInterval = 60000;
+const fetchInterval = 60000 * 2.35;
 
 app.get("/health-check", async (_req, res) => {
   const botStatus = botInterval ? "active" : "inactive"; // Check if interval is active
