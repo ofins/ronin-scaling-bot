@@ -18,10 +18,10 @@ const chatId = process.env.TELEGRAM_CHAT_ID!;
 
 bot.sendMessage(chatId, "Server restarted 🔄");
 
-bot.onText(/\/hc/, async (msg) => {
+bot.onText(/\/health/, async (msg) => {
   const chatId = msg.chat.id;
   try {
-    const response = await axios.get(`${process.env.BASE_URL}/health-check`);
+    const response = await axios.get(`${process.env.BASE_URL}/system/health`);
     bot.sendMessage(chatId, `Server Status: ${JSON.stringify(response.data)}`);
   } catch (error) {
     console.error("Health check failed:", error);
@@ -29,11 +29,16 @@ bot.onText(/\/hc/, async (msg) => {
   }
 });
 
-bot.onText(/\/start/, async (msg) => {
+bot.onText(/\/start/, async (msg, match) => {
   const chatId = msg.chat.id;
+  const input = match?.input;
+  if (input !== "/start 1") {
+    bot.sendMessage(chatId, "Please provide a value to start.");
+    return;
+  }
   try {
     const response = await axios.post(
-      `${process.env.BASE_URL}/start`,
+      `${process.env.BASE_URL}/system/start`,
       {},
       headers
     );
@@ -44,11 +49,18 @@ bot.onText(/\/start/, async (msg) => {
   }
 });
 
-bot.onText(/\/stop/, async (msg) => {
+bot.onText(/\/stop/, async (msg, match) => {
   const chatId = msg.chat.id;
+  const input = match?.input;
+
+  if (input !== "/stop 1") {
+    bot.sendMessage(chatId, "Please provide a value to start.");
+    return;
+  }
+
   try {
     const response = await axios.post(
-      `${process.env.BASE_URL}/stop`,
+      `${process.env.BASE_URL}/system/stop`,
       {},
       headers
     );
@@ -61,7 +73,6 @@ bot.onText(/\/stop/, async (msg) => {
 bot.onText(/\/toggle (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const ticker = match?.[1]; // Extract the ticker from the message
-  console.log(match);
   if (!ticker) {
     bot.sendMessage(
       chatId,
@@ -72,7 +83,7 @@ bot.onText(/\/toggle (.+)/, async (msg, match) => {
 
   try {
     const response = await axios.post(
-      `${process.env.BASE_URL}/toggle-token`,
+      `${process.env.BASE_URL}/tokens/toggle-token`,
       { ticker }, // Send ticker in the body
       headers
     );
@@ -84,14 +95,13 @@ bot.onText(/\/toggle (.+)/, async (msg, match) => {
 
 bot.onText(/\/active/, async (msg) => {
   const chatId = msg.chat.id;
-  console.log(chatId);
   try {
     const response = await axios.get(
       `${process.env.BASE_URL}/tokens/active`,
       headers
     );
 
-    const content = response.data.map(
+    const content = response.data.data.map(
       (token: TokenType) =>
         `[${token.ticker}]: nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
     );

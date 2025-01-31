@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
+import { walletConfig } from "../config/wallet";
 import { toggleSchema, tokensSchema } from "../schema/token";
 import { TokenService } from "../services/tokenService";
+import { WalletService } from "../services/walletService";
 import { autoBindMethods } from "../utils/common";
 import { createLogger } from "../utils/logger";
 
@@ -85,5 +87,16 @@ export class TokenController {
     this.tokenService.updateSingleToken(token.address, updatedToken);
 
     res.status(200).json({ message: "Success", updatedToken });
+  }
+
+  public async getWalletBalance(_req: Request, res: Response): Promise<void> {
+    const wallet = new WalletService(walletConfig, logger);
+
+    try {
+      const result = await wallet.getWalletBalance();
+      res.status(200).json(result);
+    } catch (error) {
+      res.status(500).json({ error: `An error has occured: ${error}` });
+    }
   }
 }

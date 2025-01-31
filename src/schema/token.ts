@@ -4,7 +4,7 @@ export const tokenSchema = z.object({
   address: z.string().regex(/^0x[a-fA-F0-9]{40}$/),
   isActive: z.boolean(),
   ticker: z.string(),
-  priceLevels: z.array(z.number()),
+  priceLevels: z.array(z.number().optional()),
   swapAmountInToken: z.number(),
   nextBuy: z.number(),
   nextSell: z.number(),

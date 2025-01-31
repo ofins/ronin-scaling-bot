@@ -3,7 +3,7 @@ import { TokenController } from "../controller/tokenController";
 import { authenticateAPIKey } from "../middleware/auth";
 import { TokenService } from "../services/tokenService";
 
-function tokenRoutes(tokenService: TokenService): Router {
+function tokensRoutes(tokenService: TokenService): Router {
   const router = express.Router();
   const controller = new TokenController(tokenService);
 
@@ -11,8 +11,9 @@ function tokenRoutes(tokenService: TokenService): Router {
   router.post("/add-token", authenticateAPIKey, controller.addToken);
   router.post("/update-token", authenticateAPIKey, controller.updateTokens);
   router.post("/toggle-token", authenticateAPIKey, controller.toggleToken);
+  router.get("/balance", authenticateAPIKey, controller.getWalletBalance);
 
   return router;
 }
 
-export default tokenRoutes;
+export default tokensRoutes;

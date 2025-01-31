@@ -11,7 +11,11 @@ export class CoinGeckoService {
       ","
     )}`;
     try {
-      const { data } = await axios.get(url);
+      const { data } = await axios.get(url, {
+        headers: {
+          "x-api-key": process.env.COINGECKO_API_KEY,
+        },
+      });
       return data;
     } catch (error) {
       logger.error(`Error fetching token prices: ${error}`);
