@@ -13,7 +13,7 @@ export class CoinGeckoService {
     try {
       const { data } = await axios.get(url, {
         headers: {
-          "x-api-key": process.env.COINGECKO_API_KEY,
+          "x-cg-demo-api-key": process.env.COINGECKO_API_KEY,
         },
       });
       return data;
