@@ -77,7 +77,8 @@ function systemRoutes(tokenService: TokenService) {
         return acc;
       }, {});
 
-      tokens.forEach(async (token) => {
+      // execute proper async/await logic here
+      for (const token of tokens) {
         const tokenPrice = lowerCasePrices[token.address.toLowerCase()];
         if (!tokenPrice) {
           logger.error(
@@ -155,7 +156,8 @@ function systemRoutes(tokenService: TokenService) {
         } else {
           logger.info(`${token.ticker}: Hold`);
         }
-      });
+        logger.info("here............");
+      }
     }, fetchInterval);
     res.status(200).json({ message: "Bot started" });
   });

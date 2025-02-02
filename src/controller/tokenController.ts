@@ -20,7 +20,7 @@ export class TokenController {
   public async getActiveTokens(_req: Request, res: Response): Promise<void> {
     try {
       const activeTokens = this.tokenService.getActiveTokens();
-      res.status(200).json({ message: "Success", data: activeTokens });
+      res.status(200).json(activeTokens);
     } catch (error) {
       res.status(500).json({ error: `An error has occured: ${error}` });
     }

@@ -74,10 +74,7 @@ bot.onText(/\/toggle (.+)/, async (msg, match) => {
   const chatId = msg.chat.id;
   const ticker = match?.[1]; // Extract the ticker from the message
   if (!ticker) {
-    bot.sendMessage(
-      chatId,
-      "Please provide a ticker. Example: /toggle-token BTC"
-    );
+    bot.sendMessage(chatId, "Please provide a ticker. Example: /toggle RON");
     return;
   }
 
@@ -101,7 +98,7 @@ bot.onText(/\/active/, async (msg) => {
       headers
     );
 
-    const content = response.data.data.map(
+    const content = response.data.map(
       (token: TokenType) =>
         `[${token.ticker}]: nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
     );
