@@ -156,7 +156,6 @@ function systemRoutes(tokenService: TokenService) {
         } else {
           logger.info(`${token.ticker}: Hold`);
         }
-        logger.info("here............");
       }
     }, fetchInterval);
     res.status(200).json({ message: "Bot started" });
