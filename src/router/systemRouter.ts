@@ -87,7 +87,11 @@ function systemRoutes(tokenService: TokenService) {
           return;
         }
 
-        if (!token.isActive || !token.nextBuy || !token.nextSell) {
+        if (
+          !token.isActive ||
+          token.nextBuy === undefined ||
+          token.nextSell === undefined
+        ) {
           logger.error(
             `Token ${token.ticker} is not active or nextBuy/nextSell is not set`
           );
