@@ -114,6 +114,8 @@ export class WalletService {
     };
   }
 
+  // Ronin Network
+
   async swapTokensForExactRon(
     tokenAddress: string,
     amountRonOut: number,
@@ -463,4 +465,6 @@ export class WalletService {
       };
     }
   }
+
+  // Other tokens
 }

@@ -9,13 +9,13 @@ import { TokenService } from "../services/tokenService";
 import { WalletService } from "../services/walletService";
 import { SwapResult } from "../types";
 import { createLogger } from "../utils/logger";
-import { pyramidAlgo } from "../utils/trade";
+import { pyramidAlgo, scalingOutAlgo } from "../utils/trade";
 
 const router = express.Router();
 const logger = createLogger();
 const wallet = new WalletService(walletConfig, logger);
 
-const fetchInterval = 60000 * 4.7;
+const fetchInterval = 3000 * 4.7;
 let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 router.get("/", (_req, res) => {
@@ -99,6 +99,38 @@ function systemRoutes(tokenService: TokenService) {
             `Token ${token.ticker} is not active or nextBuy/nextSell is not set`
           );
           return;
+        }
+
+        // swapping RON for USDC
+        if (token.ticker === "RON") {
+          const shouldSwap = scalingOutAlgo(tokenPrice, token.nextSell);
+
+          if (shouldSwap === 2) {
+            logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
+            sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
+            const result = await wallet.swapRONForExactTokens(
+              "0x0b7007c13325c48911f73a2dad5fa5dcbf808adc", //USDC contract
+              token.swapAmountInToken,
+              0.5
+            );
+
+            const activeToken = tokenService.getSingleToken(token.address);
+            logger.info(
+              `${activeToken?.ticker} - [PREV]: nextBuy: nextSell: ${activeToken?.nextSell}`
+            );
+
+            const nextSellIndex = token.priceLevels.indexOf(token.nextSell);
+            token.nextSell = token.priceLevels[nextSellIndex + 1];
+
+            logger.info(
+              `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}`
+            );
+            sendSwapSuccess(result as SwapResult);
+            sendMessage(`${token.ticker}: Next Sell: ${token.nextSell}`);
+          } else {
+            logger.info(`${token.ticker}: Hold`);
+          }
+          continue;
         }
 
         const shouldSwap = pyramidAlgo(

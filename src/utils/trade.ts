@@ -10,3 +10,10 @@ export function pyramidAlgo(
   }
   return 0; //do nothing
 }
+
+export function scalingOutAlgo(tokenPrice: number, nextSell: number): number {
+  if (tokenPrice >= nextSell) {
+    return 2; //sell
+  }
+  return 0; //do nothing
+}

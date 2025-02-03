@@ -2,10 +2,10 @@ export default [
   {
     address: "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
     ticker: "RON",
-    isActive: false,
-    priceLevels: [1.25, 1.5, 1.75, 2],
-    nextBuy: 1.75,
-    nextSell: 1.25,
+    isActive: true,
+    priceLevels: [0, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4],
+    nextBuy: 0,
+    nextSell: 1,
     swapAmountInToken: 0.01,
   },
   {
