@@ -1,3 +1,4 @@
+import { AlgoEnumType } from "../utils/trade";
 import tokens from "./testTokens";
 
 export type TokenType = {
@@ -8,6 +9,7 @@ export type TokenType = {
   swapAmountInToken: number;
   nextBuy: number;
   nextSell: number;
+  algoType: AlgoEnumType;
 };
 
 export class TokenService {

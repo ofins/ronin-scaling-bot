@@ -24,7 +24,7 @@ router.post("/swap", authenticateAPIKey, async (req, res) => {
 
   try {
     if (direction === 1) {
-      const result = await wallet.swapRONForExactTokens(
+      const result = await wallet.swapExactRonForToken(
         tokenAddress,
         amount,
         slippage
@@ -33,7 +33,7 @@ router.post("/swap", authenticateAPIKey, async (req, res) => {
       sendSwapSuccess(result as SwapResult);
       logger.info(result);
     } else if (direction === 2) {
-      const result = await wallet.swapExactTokensForRon(
+      const result = await wallet.swapTokensForExactRon(
         tokenAddress,
         amount,
         slippage

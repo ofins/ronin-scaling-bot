@@ -100,7 +100,7 @@ bot.onText(/\/active/, async (msg) => {
 
     const content = response.data.map(
       (token: TokenType) =>
-        `[${token.ticker}]: nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
+        `[${token.ticker}]: ${token.algoType} | nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
     );
 
     bot.sendMessage(chatId, content.join("\n"));

@@ -57,7 +57,7 @@ export class WalletService {
     return await tokenContract.decimals();
   }
 
-  private async getInitialBalances(tokenAddress: string) {
+  public async getInitialBalances(tokenAddress: string) {
     const initialRon = ethers.formatEther(
       await this.provider.getBalance(this.wallet.address)
     );

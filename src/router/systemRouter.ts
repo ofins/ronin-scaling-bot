@@ -1,4 +1,7 @@
 import express from "express";
+import { alertAlgo } from "../algo/alertAlgo";
+import { scalingUpDownAlgo } from "../algo/scalingUpAlgo";
+import { simpleLimitAlgo } from "../algo/simpleLimitAlgo";
 import { walletConfig } from "../config/wallet";
 import { CoinGeckoNetworkEnum } from "../enums/network";
 import { authenticateAPIKey } from "../middleware/auth";
@@ -9,13 +12,13 @@ import { TokenService } from "../services/tokenService";
 import { WalletService } from "../services/walletService";
 import { SwapResult } from "../types";
 import { createLogger } from "../utils/logger";
-import { pyramidAlgo, scalingOutAlgo } from "../utils/trade";
+import { AlgoEnumType, scalingOutAlgo } from "../utils/trade";
 
 const router = express.Router();
 const logger = createLogger();
 const wallet = new WalletService(walletConfig, logger);
 
-const fetchInterval = 3000 * 4.7;
+const fetchInterval = 60000 * 4.7;
 let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 router.get("/", (_req, res) => {
@@ -133,64 +136,17 @@ function systemRoutes(tokenService: TokenService) {
           continue;
         }
 
-        const shouldSwap = pyramidAlgo(
-          tokenPrice,
-          token.nextBuy,
-          token.nextSell
-        );
+        // Algo selection
+        if (token.algoType === AlgoEnumType.AlertAlgo) {
+          await alertAlgo(token, tokenPrice);
+        }
 
-        if (shouldSwap === 1) {
-          logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
-          sendMessage(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
-          const result = await wallet.swapRONForExactTokens(
-            token.address,
-            token.swapAmountInToken,
-            0.5
-          );
+        if (token.algoType === AlgoEnumType.ScalingUpDownAlgo) {
+          await scalingUpDownAlgo(token, tokenPrice, wallet, tokenService);
+        }
 
-          const activeToken = tokenService.getSingleToken(token.address);
-          logger.info(
-            `${activeToken?.ticker} - [PREV]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
-          );
-
-          const nextBuyIndex = token.priceLevels.indexOf(token.nextBuy);
-          token.nextBuy = token.priceLevels[nextBuyIndex + 1];
-          token.nextSell = token.priceLevels[nextBuyIndex - 1];
-
-          logger.info(
-            `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
-          );
-          sendSwapSuccess(result as SwapResult);
-          sendMessage(
-            `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
-          );
-        } else if (shouldSwap === 2) {
-          logger.info(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
-          sendMessage(`${token.ticker}: 🔻 Sell @ ${tokenPrice}`);
-          const result = await wallet.swapExactTokensForRon(
-            token.address,
-            token.swapAmountInToken,
-            0.5
-          );
-
-          const activeToken = tokenService.getSingleToken(token.address);
-          logger.info(
-            `${activeToken?.ticker} - [PREV]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
-          );
-
-          const nextSellIndex = token.priceLevels.indexOf(token.nextSell);
-          token.nextSell = token.priceLevels[nextSellIndex - 1];
-          token.nextBuy = token.priceLevels[nextSellIndex + 1];
-
-          logger.info(
-            `${activeToken?.ticker} - [NEW]: nextBuy: nextSell: ${activeToken?.nextSell}, ${activeToken?.nextBuy}`
-          );
-          sendSwapSuccess(result);
-          sendMessage(
-            `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
-          );
-        } else {
-          logger.info(`${token.ticker}: Hold`);
+        if (token.algoType === AlgoEnumType.SimpleLimitAlgo) {
+          await simpleLimitAlgo(token, tokenPrice, wallet);
         }
       }
     }, fetchInterval);

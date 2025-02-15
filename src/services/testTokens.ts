@@ -1,17 +1,20 @@
+import { AlgoEnumType } from "../utils/trade";
+
 export default [
   {
     address: "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
     ticker: "RON",
-    isActive: true,
+    isActive: false,
     priceLevels: [0, 1, 1.25, 1.5, 1.75, 2, 2.5, 3, 3.5, 4],
     nextBuy: 0,
     nextSell: 1,
     swapAmountInToken: 0.01,
+    algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
   {
     address: "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
     ticker: "AXS",
-    isActive: true,
+    isActive: false,
     priceLevels: [
       4.9, 4.91, 4.92, 4.93, 4.94, 4.95, 4.96, 4.97, 4.98, 4.99, 5, 5.01, 5.02,
       5.03, 5.04, 5.05, 5.06, 5.07, 5.08, 5.09, 5.1, 5.11, 5.12, 5.13, 5.14,
@@ -24,29 +27,29 @@ export default [
     nextBuy: 5.45,
     nextSell: 5.3,
     swapAmountInToken: 0.001,
+    algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
   {
     address: "0x361d8623dc1d91e04ebc148687719aace282249a",
     ticker: "KOKU",
-    isActive: false,
+    isActive: true,
     priceLevels: [
       0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022,
     ],
     nextBuy: 0.01,
     nextSell: 0.006,
     swapAmountInToken: 0.001,
+    algoType: AlgoEnumType.AlertAlgo,
   },
   {
     address: "0x06f7481D937Eb637d7d9DEeDf175957d5D881397",
     ticker: "CAG",
-    isActive: false,
-    priceLevels: [
-      0.002, 0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022,
-      0.024,
-    ],
-    nextBuy: 0.006,
-    nextSell: 0.002,
+    isActive: true,
+    priceLevels: [],
+    nextBuy: 0.003,
+    nextSell: 0.003,
     swapAmountInToken: 0.001,
+    algoType: AlgoEnumType.SimpleLimitAlgo,
   },
   {
     address: "0x4a4e24b057b595f530417860a901f3a540995256",
@@ -59,6 +62,7 @@ export default [
     nextBuy: 0.00075,
     nextSell: 0.00025,
     swapAmountInToken: 0.001,
+    algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
   {
     address: "0x5f2593afdf2366f7f981b352125a7a72477a8d9e",
@@ -71,5 +75,6 @@ export default [
     nextBuy: 0.006,
     nextSell: 0.0035,
     swapAmountInToken: 0.001,
+    algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
 ];
