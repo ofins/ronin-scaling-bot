@@ -25,7 +25,7 @@ export function stopOrderTrigger(
   nextSell: number
 ): number {
   if (tokenPrice <= nextSell) {
-    return 2; //sell
+    return 0; //sell TODO: do not sell for now.
   } else if (tokenPrice >= nextBuy) {
     return 1; //buy
   }
