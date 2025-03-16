@@ -8,6 +8,7 @@ function tokensRoutes(tokenService: TokenService): Router {
   const controller = new TokenController(tokenService);
 
   router.get("/active", authenticateAPIKey, controller.getActiveTokens);
+  router.get("/all", authenticateAPIKey, controller.getAllTokens);
   router.post("/add-token", authenticateAPIKey, controller.addToken);
   router.post("/update-token", authenticateAPIKey, controller.updateTokens);
   router.post("/toggle-token", authenticateAPIKey, controller.toggleToken);

@@ -18,7 +18,7 @@ const router = express.Router();
 const logger = createLogger();
 const wallet = new WalletService(walletConfig, logger);
 
-const fetchInterval = 60000 * 4.7;
+const fetchInterval = 5000 * 4.7;
 let botInterval: NodeJS.Timeout | null = null; // Store the interval ID
 
 router.get("/", (_req, res) => {
@@ -146,7 +146,7 @@ function systemRoutes(tokenService: TokenService) {
         }
 
         if (token.algoType === AlgoEnumType.SimpleLimitAlgo) {
-          await simpleLimitAlgo(token, tokenPrice, wallet);
+          await simpleLimitAlgo(token, tokenPrice, wallet, tokenService);
         }
       }
     }, fetchInterval);

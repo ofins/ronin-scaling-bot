@@ -2,6 +2,7 @@ import { AlgoEnumType } from "../utils/trade";
 
 export default [
   {
+    id: "1",
     address: "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
     ticker: "RON",
     isActive: false,
@@ -12,6 +13,7 @@ export default [
     algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
   {
+    id: "2",
     address: "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
     ticker: "AXS",
     isActive: false,
@@ -30,51 +32,29 @@ export default [
     algoType: AlgoEnumType.ScalingUpDownAlgo,
   },
   {
+    id: "3",
     address: "0x361d8623dc1d91e04ebc148687719aace282249a",
     ticker: "KOKU",
     isActive: true,
     priceLevels: [
       0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022,
     ],
-    nextBuy: 0.01,
-    nextSell: 0.006,
-    swapAmountInToken: 0.001,
-    algoType: AlgoEnumType.AlertAlgo,
-  },
-  {
-    address: "0x06f7481D937Eb637d7d9DEeDf175957d5D881397",
-    ticker: "CAG",
-    isActive: true,
-    priceLevels: [],
-    nextBuy: 0.003,
-    nextSell: 0.003,
+    nextBuy: 0,
+    nextSell: 0.001,
     swapAmountInToken: 0.001,
     algoType: AlgoEnumType.SimpleLimitAlgo,
   },
   {
-    address: "0x4a4e24b057b595f530417860a901f3a540995256",
-    ticker: "DOT",
-    isActive: false,
+    id: "4",
+    address: "0x361d8623dc1d91e04ebc148687719aace282249a",
+    ticker: "KOKU",
+    isActive: true,
     priceLevels: [
-      0.00025, 0.0005, 0.00075, 0.001, 0.00125, 0.0015, 0.00175, 0.002, 0.00225,
-      0.0025,
+      0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022,
     ],
-    nextBuy: 0.00075,
-    nextSell: 0.00025,
+    nextBuy: 0.001,
+    nextSell: 0,
     swapAmountInToken: 0.001,
-    algoType: AlgoEnumType.ScalingUpDownAlgo,
-  },
-  {
-    address: "0x5f2593afdf2366f7f981b352125a7a72477a8d9e",
-    ticker: "KAT",
-    isActive: false,
-    priceLevels: [
-      0.0035, 0.005, 0.006, 0.007, 0.008, 0.009, 0.01, 0.011, 0.012, 0.013,
-      0.014, 0.015,
-    ],
-    nextBuy: 0.006,
-    nextSell: 0.0035,
-    swapAmountInToken: 0.001,
-    algoType: AlgoEnumType.ScalingUpDownAlgo,
+    algoType: AlgoEnumType.SimpleLimitAlgo,
   },
 ];

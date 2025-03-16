@@ -2,6 +2,7 @@ import { AlgoEnumType } from "../utils/trade";
 import tokens from "./testTokens";
 
 export type TokenType = {
+  id: string;
   address: string;
   isActive: boolean;
   ticker: string;
@@ -37,9 +38,16 @@ export class TokenService {
     );
   }
 
-  public updateSingleToken(address: string, token: TokenType) {
-    const index = this.tokens.findIndex((a) => a.address === address);
+  public getSingleTokenById(id: string) {
+    return this.tokens.find((a) => a.id === id);
+  }
+
+  public updateSingleToken(id: string, token: TokenType): TokenType {
+    // const index = this.tokens.findIndex((a) => a.address === address);
+    // this.tokens[index] = token;
+    const index = this.tokens.findIndex((a) => a.id === id);
     this.tokens[index] = token;
+    return token;
   }
 
   public addToken(address: TokenType) {

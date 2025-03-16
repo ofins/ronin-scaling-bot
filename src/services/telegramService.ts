@@ -100,12 +100,65 @@ bot.onText(/\/active/, async (msg) => {
 
     const content = response.data.map(
       (token: TokenType) =>
-        `[${token.ticker}]: ${token.algoType} | nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
+        `[${token.ticker}]: ${token.algoType} | ${token.id} | nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
     );
 
     bot.sendMessage(chatId, content.join("\n"));
   } catch (error) {
     bot.sendMessage(chatId, `Active Tokens Failed 🚨: ${error}`);
+  }
+});
+
+bot.onText(/\/all/, async (msg) => {
+  const chatId = msg.chat.id;
+  try {
+    const response = await axios.get(
+      `${process.env.BASE_URL}/tokens/all`,
+      headers
+    );
+
+    const activeTokens = response.data.filter(
+      (token: TokenType) => token.isActive
+    );
+    const inactiveTokens = response.data.filter(
+      (token: TokenType) => !token.isActive
+    );
+
+    const activeContent = activeTokens.map(
+      (token: TokenType) =>
+        `[${token.ticker}]: ${token.algoType} | ${token.id} | nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
+    );
+
+    const inactiveContent = inactiveTokens.map(
+      (token: TokenType) =>
+        `[${token.ticker}]: ${token.algoType} | ${token.id} | nextBuy ${token.nextBuy}, nextSell ${token.nextSell}`
+    );
+
+    const content = [
+      "ACTIVE TOKENS:",
+      ...activeContent,
+      "",
+      "INACTIVE TOKENS:",
+      ...inactiveContent,
+    ];
+
+    bot.sendMessage(chatId, content.join("\n"));
+  } catch (error) {
+    bot.sendMessage(chatId, `All Tokens Failed 🚨: ${error}`);
+  }
+});
+
+bot.onText(/\/balance/, async (msg) => {
+  const chatId = msg.chat.id;
+  try {
+    const response = await axios.get(
+      `${process.env.BASE_URL}/tokens/balance`,
+      headers
+    );
+
+    bot.sendMessage(chatId, `Wallet: ${JSON.stringify(response.data)}`);
+  } catch (error) {
+    bot.sendMessage(chatId, `Wallet Failed 🚨: ${error}`);
   }
 });
 

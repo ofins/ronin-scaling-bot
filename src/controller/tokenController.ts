@@ -26,6 +26,15 @@ export class TokenController {
     }
   }
 
+  public async getAllTokens(_req: Request, res: Response): Promise<void> {
+    try {
+      const tokens = this.tokenService.getAllTokens();
+      res.status(200).json(tokens);
+    } catch (error) {
+      res.status(500).json({ error: `An error has occured: ${error}` });
+    }
+  }
+
   public async addToken(req: Request, res: Response): Promise<void> {
     const body = req.body;
 
@@ -69,7 +78,7 @@ export class TokenController {
   }
 
   public async toggleToken(req: Request, res: Response): Promise<void> {
-    const { ticker } = req.body;
+    const { id } = req.body;
 
     try {
       toggleSchema.parse(req.body);
@@ -77,14 +86,14 @@ export class TokenController {
       res.status(400).json({ error: "Invalid schema" });
     }
 
-    const token = this.tokenService.getSingleTokenByTicker(ticker);
+    const token = this.tokenService.getSingleTokenById(id);
     if (!token) {
       res.status(404).json({ error: "Token not found" });
       return;
     }
 
     const updatedToken = { ...token, isActive: !token.isActive };
-    this.tokenService.updateSingleToken(token.address, updatedToken);
+    this.tokenService.updateSingleToken(token.id, updatedToken);
 
     res.status(200).json({ message: "Success", updatedToken });
   }

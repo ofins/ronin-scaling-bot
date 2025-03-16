@@ -35,11 +35,11 @@ export function stopOrderTrigger(
 export function limitOrderTrigger(
   tokenPrice: number,
   nextBuy: number = 0,
-  nextSell: number
+  nextSell: number = 0
 ): number {
-  if (tokenPrice <= nextBuy) {
+  if (tokenPrice <= nextBuy && nextBuy !== 0) {
     return 1; //buy
-  } else if (tokenPrice >= nextSell) {
+  } else if (tokenPrice >= nextSell && nextSell !== 0) {
     return 2; //sell
   }
   return 0; //do nothing

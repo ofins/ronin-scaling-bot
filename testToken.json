@@ -1,5 +1,6 @@
 [
   {
+    "id": "1",
     "address": "0xe514d9deb7966c8be0ca922de8a064264ea6bcd4",
     "ticker": "RON",
     "isActive": false,
@@ -9,6 +10,7 @@
     "swapAmountInToken": 0.01
   },
   {
+    "id": "2",
     "address": "0x97a9107c1793bc407d6f527b77e7fff4d812bece",
     "ticker": "AXS",
     "isActive": true,
@@ -26,6 +28,7 @@
     "swapAmountInToken": 0.001
   },
   {
+    "id": "3",
     "address": "0x361d8623dc1d91e04ebc148687719aace282249a",
     "ticker": "KOKU",
     "isActive": false,
