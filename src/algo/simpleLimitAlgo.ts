@@ -6,6 +6,7 @@ import { createLogger } from "../utils/logger";
 import { limitOrderTrigger } from "../utils/trade";
 
 const logger = createLogger();
+const MAX_ATTEMPTS = 1;
 
 export async function simpleLimitAlgo(
   token: TokenType,
@@ -26,13 +27,31 @@ export async function simpleLimitAlgo(
     sendMessage(
       `${token.ticker}: 🔺 amount ${token.swapAmountInToken} BUY @ ${tokenPrice}`
     );
-    const result = await wallet.swapExactRonForToken(
-      token.address,
-      token.swapAmountInToken,
-      0.5
-    );
 
-    sendSwapSuccess(result as SwapResult);
+    let isSuccessful = false;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const result = await wallet.swapExactRonForToken(
+        token.address,
+        token.swapAmountInToken,
+        0.5
+      );
+
+      if (result.success) {
+        isSuccessful = true;
+        sendSwapSuccess(result as SwapResult);
+        break;
+      }
+    }
+
+    if (!isSuccessful) {
+      logger.error(
+        `Failed to swap ${token.ticker} after ${MAX_ATTEMPTS} attempts`
+      );
+      sendMessage(
+        `Failed to swap ${token.ticker} after ${MAX_ATTEMPTS} attempts`
+      );
+    }
+
     const updatedToken = tokenService.updateSingleToken(token.id, {
       ...token,
       isActive: false,
@@ -52,13 +71,31 @@ export async function simpleLimitAlgo(
     sendMessage(
       `${token.ticker}: 🔻 Sell amount ${token.swapAmountInToken} @ ${tokenPrice}`
     );
-    const result = await wallet.swapExactTokensForRon(
-      token.address,
-      token.swapAmountInToken,
-      0.5
-    );
 
-    sendSwapSuccess(result);
+    let isSuccessful = false;
+    for (let i = 0; i < MAX_ATTEMPTS; i++) {
+      const result = await wallet.swapExactTokensForRon(
+        token.address,
+        token.swapAmountInToken,
+        0.5
+      );
+
+      if (result.success) {
+        isSuccessful = true;
+        sendSwapSuccess(result);
+        break;
+      }
+    }
+
+    if (!isSuccessful) {
+      logger.error(
+        `Failed to swap ${token.ticker} after ${MAX_ATTEMPTS} attempts`
+      );
+      sendMessage(
+        `Failed to swap ${token.ticker} after ${MAX_ATTEMPTS} attempts`
+      );
+    }
+
     const updatedToken = tokenService.updateSingleToken(token.id, {
       ...token,
       isActive: false,
