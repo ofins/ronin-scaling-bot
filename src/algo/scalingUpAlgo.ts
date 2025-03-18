@@ -3,7 +3,7 @@ import { TokenService, TokenType } from "../services/tokenService";
 import { WalletService } from "../services/walletService";
 import { SwapResult } from "../types";
 import { createLogger } from "../utils/logger";
-import { stopOrderTrigger } from "../utils/trade";
+import { stopOrderTrigger, SwapActionType } from "../utils/trade";
 
 const logger = createLogger();
 
@@ -19,7 +19,7 @@ export async function scalingUpDownAlgo(
     token.nextSell
   );
 
-  if (shouldSwap === 1) {
+  if (shouldSwap === SwapActionType.BUY) {
     logger.info(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
     sendMessage(`${token.ticker}: 🔺 BUY @ ${tokenPrice}`);
     const result = await wallet.swapExactRonForToken(
@@ -45,7 +45,7 @@ export async function scalingUpDownAlgo(
       `${token.ticker}: Next Buy: ${token.nextBuy}, Next Sell: ${token.nextSell}`
     );
     return true;
-  } else if (shouldSwap === 2) {
+  } else if (shouldSwap === SwapActionType.SELL) {
     // const { initialToken } = await wallet.getInitialBalances(token.address);
 
     // const balanceToSwapInToken = Math.floor(Number(initialToken));

@@ -35,7 +35,7 @@ export default [
     id: "3",
     address: "0xf988f63bf26c3ed3fbf39922149e3e7b1e5c27cb",
     ticker: "RONKE",
-    isActive: true,
+    isActive: false,
     priceLevels: [
       0.004, 0.006, 0.008, 0.01, 0.012, 0.014, 0.016, 0.018, 0.02, 0.022,
     ],
@@ -54,7 +54,7 @@ export default [
     ],
     nextBuy: 0.002,
     nextSell: 0,
-    swapAmountInToken: 1000000000,
+    swapAmountInToken: 0.001,
     algoType: AlgoEnumType.SimpleLimitAlgo,
   },
 ];

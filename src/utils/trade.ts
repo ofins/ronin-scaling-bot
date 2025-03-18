@@ -9,6 +9,12 @@ export enum AlgoEnumType {
   AlertAlgo = "alert",
 }
 
+export enum SwapActionType {
+  HOLD = 0,
+  BUY = 1,
+  SELL = 2,
+}
+
 export function checkAlgo(algoType: AlgoEnumType) {
   if (algoType === AlgoEnumType.ScalingUpDownAlgo) {
     return AlgoEnumType.ScalingUpDownAlgo;
@@ -25,11 +31,11 @@ export function stopOrderTrigger(
   nextSell: number
 ): number {
   if (tokenPrice <= nextSell) {
-    return 0; //sell TODO: do not sell for now.
+    return SwapActionType.HOLD; //sell TODO: do not sell for now.
   } else if (tokenPrice >= nextBuy) {
-    return 1; //buy
+    return SwapActionType.BUY; //buy
   }
-  return 0; //do nothing
+  return SwapActionType.HOLD; //do nothing
 }
 
 export function limitOrderTrigger(
@@ -38,16 +44,16 @@ export function limitOrderTrigger(
   nextSell: number = 0
 ): number {
   if (tokenPrice <= nextBuy && nextBuy !== 0) {
-    return 1; //buy
+    return SwapActionType.BUY; //buy
   } else if (tokenPrice >= nextSell && nextSell !== 0) {
-    return 2; //sell
+    return SwapActionType.SELL; //sell
   }
-  return 0; //do nothing
+  return SwapActionType.HOLD; //do nothing
 }
 
 export function scalingOutAlgo(tokenPrice: number, nextSell: number): number {
   if (tokenPrice >= nextSell) {
-    return 2; //sell
+    return SwapActionType.SELL; //sell
   }
-  return 0; //do nothing
+  return SwapActionType.HOLD; //do nothing
 }
